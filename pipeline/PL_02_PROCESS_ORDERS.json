@@ -1,0 +1,38 @@
+{
+	"name": "PL_02_PROCESS_ORDERS",
+	"properties": {
+		"activities": [
+			{
+				"name": "Lookup HWM",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "SELECT\n    MAX(last_processed_timestamp) AS previous_hwm\nFROM dbo.etl_watermark\nWHERE source_name = 'orders';",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azuresql",
+						"type": "DatasetReference"
+					}
+				}
+			}
+		],
+		"annotations": [],
+		"lastPublishTime": "2026-08-19T14:55:27Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

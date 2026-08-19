@@ -1,0 +1,15 @@
+{
+	"name": "rg-quickbasket",
+	"properties": {
+		"trustModeClaimForMi": {
+			"value": "Disabled",
+			"editable": true
+		}
+	},
+	"location": "southeastasia",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "aca88bf6-2fdf-475e-bde0-7b0b82e04546",
+		"tenantId": "e76ed5b6-2ac0-4df3-8a90-a1e53dfdfd6a"
+	}
+}

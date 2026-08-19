@@ -1,0 +1,225 @@
+{
+	"name": "pl_until",
+	"properties": {
+		"activities": [
+			{
+				"name": "Until",
+				"type": "Until",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(variables('v_files_ready'),true)",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "Get Metadata of customers",
+							"type": "GetMetadata",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"dataset": {
+									"referenceName": "ds_blob",
+									"type": "DatasetReference",
+									"parameters": {
+										"ds_folder_name": "customers",
+										"ds_file_name": "customers.csv"
+									}
+								},
+								"fieldList": [
+									"exists"
+								],
+								"storeSettings": {
+									"type": "AzureBlobStorageReadSettings",
+									"recursive": true,
+									"enablePartitionDiscovery": false
+								},
+								"formatSettings": {
+									"type": "DelimitedTextReadSettings"
+								}
+							}
+						},
+						{
+							"name": "Get Metadata of products",
+							"type": "GetMetadata",
+							"dependsOn": [
+								{
+									"activity": "Get Metadata of customers",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"dataset": {
+									"referenceName": "ds_blob",
+									"type": "DatasetReference",
+									"parameters": {
+										"ds_folder_name": "products",
+										"ds_file_name": "products.csv"
+									}
+								},
+								"fieldList": [
+									"exists"
+								],
+								"storeSettings": {
+									"type": "AzureBlobStorageReadSettings",
+									"recursive": true,
+									"enablePartitionDiscovery": false
+								},
+								"formatSettings": {
+									"type": "DelimitedTextReadSettings"
+								}
+							}
+						},
+						{
+							"name": "Get Metadata of orders",
+							"type": "GetMetadata",
+							"dependsOn": [
+								{
+									"activity": "Get Metadata of products",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"dataset": {
+									"referenceName": "ds_blob",
+									"type": "DatasetReference",
+									"parameters": {
+										"ds_folder_name": "orders",
+										"ds_file_name": {
+											"value": "@concat('orders_',formatDateTime(convertFromUtc(pipeline().TriggerTime,'India Standard Time'),'yyyyMMdd'),'.csv')",
+											"type": "Expression"
+										}
+									}
+								},
+								"fieldList": [
+									"exists"
+								],
+								"storeSettings": {
+									"type": "AzureBlobStorageReadSettings",
+									"recursive": true,
+									"enablePartitionDiscovery": false
+								},
+								"formatSettings": {
+									"type": "DelimitedTextReadSettings"
+								}
+							}
+						},
+						{
+							"name": "Get Metadata of payment_returns",
+							"type": "GetMetadata",
+							"dependsOn": [
+								{
+									"activity": "Get Metadata of orders",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"dataset": {
+									"referenceName": "ds_blob",
+									"type": "DatasetReference",
+									"parameters": {
+										"ds_folder_name": "payments_returns",
+										"ds_file_name": {
+											"value": "@concat('payments_returns_',formatDateTime(convertFromUtc(pipeline().TriggerTime,'India Standard Time'),'yyyyMMdd'),'.csv')",
+											"type": "Expression"
+										}
+									}
+								},
+								"fieldList": [
+									"exists"
+								],
+								"storeSettings": {
+									"type": "AzureBlobStorageReadSettings",
+									"recursive": true,
+									"enablePartitionDiscovery": false
+								},
+								"formatSettings": {
+									"type": "DelimitedTextReadSettings"
+								}
+							}
+						},
+						{
+							"name": "files_ready",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "Get Metadata of payment_returns",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "v_files_ready",
+								"value": {
+									"value": "@and(\n    and(activity('Get Metadata of customers').output.exists,activity('Get Metadata of orders').output.exists),\n\nand(activity('Get Metadata of payment_returns').output.exists,activity('Get Metadata of products').output.exists)\n)",
+									"type": "Expression"
+								}
+							}
+						}
+					],
+					"timeout": "0.12:00:00"
+				}
+			}
+		],
+		"parameters": {
+			"pl_folder_name": {
+				"type": "string"
+			},
+			"pl_file_name": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"v_files_ready": {
+				"type": "Boolean"
+			}
+		},
+		"annotations": [],
+		"lastPublishTime": "2026-08-18T13:31:55Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

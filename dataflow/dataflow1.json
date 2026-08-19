@@ -1,0 +1,244 @@
+{
+	"name": "dataflow1",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_df_orders",
+						"type": "DatasetReference"
+					},
+					"name": "RawOrders"
+				},
+				{
+					"dataset": {
+						"referenceName": "ds_df_customers",
+						"type": "DatasetReference"
+					},
+					"name": "RawCustomers"
+				},
+				{
+					"dataset": {
+						"referenceName": "ds_df_products",
+						"type": "DatasetReference"
+					},
+					"name": "RawProducts"
+				},
+				{
+					"dataset": {
+						"referenceName": "ds_df_payment_returns",
+						"type": "DatasetReference"
+					},
+					"name": "RawPaymentReturns"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_df_adls",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				}
+			],
+			"transformations": [
+				{
+					"name": "FilterHWM"
+				},
+				{
+					"name": "DerivedColumns"
+				},
+				{
+					"name": "NewHWM"
+				},
+				{
+					"name": "WindowDuplicateRecords"
+				},
+				{
+					"name": "CustomersCleanup",
+					"description": "trimmed customer name and also renamed the NULL or empty string values of \"city\" to \"UNKNOWN\""
+				},
+				{
+					"name": "RemoveDuplicates",
+					"description": "Removed duplicate customer_id"
+				},
+				{
+					"name": "lookupCustomers"
+				},
+				{
+					"name": "Select",
+					"description": "Renaming customer_id to master_customer_id to avoid confusion at the time of customer lookup in orders stream"
+				},
+				{
+					"name": "DeriveCustomerExists",
+					"description": "Creating new column to check if the customer exists in the master customer table.If not, then we will mark FALSE"
+				},
+				{
+					"name": "lookupProducts"
+				},
+				{
+					"name": "SelectProduct",
+					"description": "Renaming product_id to master_product_id to avoid confusion at the time of products lookup"
+				},
+				{
+					"name": "DeriveProductsExists",
+					"description": "Creating new column to check if the products exists in the master product table.If not, then we will mark FALSE"
+				},
+				{
+					"name": "lookupPaymentReturns"
+				},
+				{
+					"name": "SelectPaymentReturns",
+					"description": "Renaming order_id to p_r_order_id to avoid confusion at the time of paymentreturns lookup"
+				},
+				{
+					"name": "FixPRNulls",
+					"description": "creating net_revenue column"
+				},
+				{
+					"name": "DeriveNetRevenue"
+				}
+			],
+			"scriptLines": [
+				"parameters{",
+				"     pl_hwm as string ('1900-01-01 00:00:00.000')",
+				"}",
+				"source(output(",
+				"          order_id as string,",
+				"          customer_id as string,",
+				"          product_id as string,",
+				"          store_id as string,",
+				"          order_date as date,",
+				"          last_updated_date as string,",
+				"          quantity as short,",
+				"          selling_price as decimal(10,0),",
+				"          discount as decimal(10,0),",
+				"          order_status as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     inferDriftedColumnTypes: true,",
+				"     ignoreNoFilesFound: false,",
+				"     wildcardPaths:['orders*'],",
+				"     partitionBy('hash', 1)) ~> RawOrders",
+				"source(output(",
+				"          customer_id as string,",
+				"          customer_name as string,",
+				"          city as string,",
+				"          membership as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> RawCustomers",
+				"source(output(",
+				"          product_id as string,",
+				"          product_name as string,",
+				"          brand as string,",
+				"          category as string,",
+				"          store_id as string,",
+				"          mrp as double",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> RawProducts",
+				"source(output(",
+				"          order_id as string,",
+				"          payment_method as string,",
+				"          payment_status as string,",
+				"          return_status as string,",
+				"          refund_amount as short",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     wildcardPaths:['payments_returns*']) ~> RawPaymentReturns",
+				"DerivedColumns filter(last_updated_date > toTimestamp($pl_hwm, 'yyyy-MM-dd HH:mm:ss'),",
+				"     partitionBy('hash', 1)) ~> FilterHWM",
+				"RawOrders derive(last_updated_date = toTimestamp(trim(last_updated_date), 'yyyy-MM-dd HH:mm'),",
+				"          gross_amount = quantity*selling_price,",
+				"          discounted_amount = toDouble((quantity*selling_price)-discount),",
+				"          gst_amount = round(((quantity*selling_price)-discount)*0.18,2),",
+				"          final_amount = (quantity*selling_price)-discount +  (((quantity*selling_price)-discount)*0.18),",
+				"     partitionBy('hash', 1)) ~> DerivedColumns",
+				"FilterHWM aggregate(groupBy(last_updated_date),",
+				"     new_hwm = max(last_updated_date)) ~> NewHWM",
+				"FilterHWM window(over(order_id),",
+				"     desc(last_updated_date, true),",
+				"     rank_duplicate = rowNumber()) ~> WindowDuplicateRecords",
+				"RawCustomers derive(customer_name = trim(customer_name),",
+				"          city = iif(or(isNull(city),city==''), 'UNKNOWN', trim(city))) ~> CustomersCleanup",
+				"CustomersCleanup aggregate(groupBy(customer_id),",
+				"     customer_name = first(customer_name),",
+				"          city = first(city),",
+				"          membership = first(membership)) ~> RemoveDuplicates",
+				"WindowDuplicateRecords, Select lookup(customer_id == master_customer_id,",
+				"     multiple: false,",
+				"     pickup: 'any',",
+				"     broadcast: 'auto')~> lookupCustomers",
+				"RemoveDuplicates select(mapColumn(",
+				"          master_customer_id = customer_id,",
+				"          customer_name,",
+				"          city,",
+				"          membership",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> Select",
+				"lookupCustomers derive(invalid_customer = iif(or(isNull(master_customer_id),master_customer_id==''),'True', 'False'),",
+				"          invalid_quantity = iif(quantity<0, 'True', 'False'),",
+				"          invalid_selling_price = iif(selling_price<0, 'True', 'False')) ~> DeriveCustomerExists",
+				"DeriveCustomerExists, SelectProduct lookup(product_id == master_product_id,",
+				"     multiple: false,",
+				"     pickup: 'any',",
+				"     broadcast: 'auto')~> lookupProducts",
+				"RawProducts select(mapColumn(",
+				"          master_product_id = product_id,",
+				"          product_name,",
+				"          brand,",
+				"          category,",
+				"          store_id,",
+				"          mrp",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> SelectProduct",
+				"lookupProducts derive(invalid_product_id = iif(or(isNull(master_product_id),trim(master_product_id)==''), 'True', 'False')) ~> DeriveProductsExists",
+				"DeriveProductsExists, SelectPaymentReturns lookup(order_id == p_r_order_id,",
+				"     multiple: false,",
+				"     pickup: 'any',",
+				"     broadcast: 'auto')~> lookupPaymentReturns",
+				"RawPaymentReturns select(mapColumn(",
+				"          p_r_order_id = order_id,",
+				"          payment_method,",
+				"          payment_status,",
+				"          return_status,",
+				"          refund_amount",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> SelectPaymentReturns",
+				"lookupPaymentReturns derive(refund_amount = iifNull(refund_amount, toDecimal(0, 10, 2)),",
+				"          payment_method = iifNull(payment_method, 'UNKNOWN'),",
+				"          payment_status = iifNull(payment_status, 'UNKNOWN'),",
+				"          return_status = iifNull(return_status, 'UNKNOWN')) ~> FixPRNulls",
+				"FixPRNulls derive(net_revenue = iif(",
+				"    or(",
+				"        equals(order_status, 'Delivered'),",
+				"        equals(order_status, 'Returned')",
+				"    ),",
+				"    round(final_amount - refund_amount, 2),",
+				"    iif(",
+				"        equals(order_status, 'Cancelled'),",
+				"        toDouble(0),",
+				"        toDouble(0)",
+				"    )",
+				")) ~> DeriveNetRevenue",
+				"SelectPaymentReturns sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> sink1"
+			]
+		}
+	}
+}
