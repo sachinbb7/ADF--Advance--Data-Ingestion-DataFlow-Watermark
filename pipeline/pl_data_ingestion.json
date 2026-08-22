@@ -156,14 +156,14 @@
 														},
 														"RowsRead": {
 															"value": {
-																"value": "@activity('Copy customers data').output.rowsRead",
+																"value": "@activity('Copy customers data').output.dataRead",
 																"type": "Expression"
 															},
 															"type": "Int64"
 														},
 														"RowsWritten": {
 															"value": {
-																"value": "@activity('Copy customers data').output.rowsCopied",
+																"value": "@activity('Copy customers data').output.dataCopied",
 																"type": "Expression"
 															},
 															"type": "Int64"
@@ -207,14 +207,14 @@
 														},
 														"ErrorCode": {
 															"value": {
-																"value": "@activity('Copy customers data').output.error.errorCode",
+																"value": "@activity('Copy customers data').output.errors[0].Code",
 																"type": "Expression"
 															},
 															"type": "String"
 														},
 														"ErrorMessage": {
 															"value": {
-																"value": "@activity('Copy customers data').output.error.message",
+																"value": "@activity('Copy customers data').output.errors[0].Message",
 																"type": "Expression"
 															},
 															"type": "String"
@@ -378,7 +378,7 @@
 														},
 														"RowsRead": {
 															"value": {
-																"value": "@activity('Copy products data').output.rowsRead",
+																"value": "@activity('Copy products data').output.dataRead",
 																"type": "Expression"
 															},
 															"type": "Int64"
@@ -429,14 +429,14 @@
 														},
 														"ErrorCode": {
 															"value": {
-																"value": "@activity('Copy products data').output.error.errorCode",
+																"value": "@activity('Copy products data').output.errors[0].Code",
 																"type": "Expression"
 															},
 															"type": "String"
 														},
 														"ErrorMessage": {
 															"value": {
-																"value": "@activity('Copy products data').output.error.message",
+																"value": "@activity('Copy products data').output.errors[0].Message",
 																"type": "Expression"
 															},
 															"type": "String"
@@ -651,14 +651,14 @@
 														},
 														"ErrorCode": {
 															"value": {
-																"value": "@activity('Copy orders data').output.error.errorCode",
+																"value": "@activity('Copy orders data').output.errors[0].Code",
 																"type": "Expression"
 															},
 															"type": "String"
 														},
 														"ErrorMessage": {
 															"value": {
-																"value": "@activity('Copy orders data').output.error.message",
+																"value": "@activity('Copy orders data').output.errors[0].Message",
 																"type": "Expression"
 															},
 															"type": "String"
@@ -801,7 +801,7 @@
 														},
 														"FileName": {
 															"value": {
-																"value": "item()",
+																"value": "@item()",
 																"type": "Expression"
 															},
 															"type": "String"
@@ -873,14 +873,14 @@
 														},
 														"ErrorCode": {
 															"value": {
-																"value": "@activity('Copy payments_returns  data').output.error.errorCode",
+																"value": "@activity('Copy payments_returns  data').output.errors[0].Code",
 																"type": "Expression"
 															},
 															"type": "String"
 														},
 														"ErrorMessage": {
 															"value": {
-																"value": "@activity('Copy payments_returns  data').output.error.message",
+																"value": "@activity('Copy payments_returns  data').output.error[0].Message",
 																"type": "Expression"
 															},
 															"type": "String"
