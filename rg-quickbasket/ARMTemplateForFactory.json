@@ -102,6 +102,23 @@
 							"waitOnCompletion": true,
 							"parameters": {}
 						}
+					},
+					{
+						"name": "Data Ingestion Failure",
+						"type": "Fail",
+						"dependsOn": [
+							{
+								"activity": "exec_ingestion",
+								"dependencyConditions": [
+									"Failed"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"message": "Data Ingestion Failed - Check pl_data_ingestion",
+							"errorCode": "Pipeline Failed"
+						}
 					}
 				],
 				"policy": {
@@ -158,7 +175,7 @@
 						}
 					},
 					{
-						"name": "Data flow1",
+						"name": "DF_PROCESS_ORDERS",
 						"type": "ExecuteDataFlow",
 						"dependsOn": [
 							{
@@ -178,10 +195,14 @@
 						"userProperties": [],
 						"typeProperties": {
 							"dataflow": {
-								"referenceName": "DataFlowTransformations",
+								"referenceName": "DF_PROCESS_ORDERS",
 								"type": "DataFlowReference",
 								"parameters": {
-									"pl_hwm": "'1900-01-01 00:00:00.000'"
+									"pl_hwm": "'1900-01-01 00:00:00.000'",
+									"pl_file_date": {
+										"value": "'@{formatDateTime(utcNow(),'yyyyMMdd')}'",
+										"type": "Expression"
+									}
 								},
 								"datasetParameters": {
 									"RawOrders": {},
@@ -204,22 +225,27 @@
 										},
 										"ds_container": "rejected"
 									},
-									"SummarySink": {
+									"CuratedSummarySink": {
 										"ds_folder": "store_product_summary",
 										"ds_file": {
 											"value": "@concat(\n    'store_product_summary_',\n    formatDateTime(utcNow(),'yyyyMMdd'),\n    '.csv'\n)",
 											"type": "Expression"
 										},
 										"ds_container": "curated"
-									}
+									},
+									"HwmCache": {}
 								}
 							},
 							"staging": {},
 							"compute": {
-								"coreCount": 8,
+								"coreCount": 16,
 								"computeType": "General"
 							},
-							"traceLevel": "Fine"
+							"traceLevel": "None",
+							"runConcurrently": true,
+							"cacheSinks": {
+								"firstRowOnly": true
+							}
 						}
 					},
 					{
@@ -238,18 +264,215 @@
 							"waitOnCompletion": true,
 							"parameters": {}
 						}
+					},
+					{
+						"name": "Stored procedure to update HWM",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [
+							{
+								"activity": "DF_PROCESS_ORDERS",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[dbo].[usp_Update_Watermark]",
+							"storedProcedureParameters": {
+								"NewWatermarkValue": {
+									"value": {
+										"value": "@activity('DF_PROCESS_ORDERS').output.runStatus.output.HwmCache.value[0].new_hwm",
+										"type": "Expression"
+									},
+									"type": "DateTime"
+								},
+								"PipelineRunId": {
+									"value": {
+										"value": "@pipeline().RunId",
+										"type": "Expression"
+									},
+									"type": "String"
+								},
+								"SourceName": {
+									"value": "DF_PROCESS_ORDERS",
+									"type": "String"
+								}
+							}
+						},
+						"linkedServiceName": {
+							"referenceName": "ls_azuresql",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "DataFlow Success Logging",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [
+							{
+								"activity": "DF_PROCESS_ORDERS",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[dbo].[usp_Insert_Success_Log]",
+							"storedProcedureParameters": {
+								"ActivityName": {
+									"value": "DF_PROCESS_ORDERS",
+									"type": "String"
+								},
+								"FileName": {
+									"value": {
+										"value": "@concat(\n    'orders batch date: ',\n    pipeline().parameters.pl_file_date\n)",
+										"type": "Expression"
+									},
+									"type": "String"
+								},
+								"PipelineName": {
+									"value": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"type": "String"
+								},
+								"PipelineRunId": {
+									"value": {
+										"value": "@pipeline().RunId",
+										"type": "Expression"
+									},
+									"type": "String"
+								},
+								"RowsRead": {
+									"value": {
+										"value": "@activity('DF_PROCESS_ORDERS').output.rowsRead",
+										"type": "Expression"
+									},
+									"type": "Int64"
+								},
+								"RowsWritten": {
+									"value": {
+										"value": "@activity('DF_PROCESS_ORDERS').output.rowsCopied",
+										"type": "Expression"
+									},
+									"type": "Int64"
+								},
+								"SourceName": {
+									"value": "orders",
+									"type": "String"
+								}
+							}
+						},
+						"linkedServiceName": {
+							"referenceName": "ls_azuresql",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "DataFlow Failure Logging",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [
+							{
+								"activity": "DF_PROCESS_ORDERS",
+								"dependencyConditions": [
+									"Failed"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[dbo].[usp_Insert_Failure_Log]",
+							"storedProcedureParameters": {
+								"ActivityName": {
+									"value": "DF_PROCESS_ORDERS",
+									"type": "String"
+								},
+								"ErrorCode": {
+									"value": {
+										"value": "@activity('DF_PROCESS_ORDERS').output.error.errorCode",
+										"type": "Expression"
+									},
+									"type": "String"
+								},
+								"ErrorMessage": {
+									"value": {
+										"value": "@activity('DF_PROCESS_ORDERS').output.error.message",
+										"type": "Expression"
+									},
+									"type": "String"
+								},
+								"FileName": {
+									"value": {
+										"value": "@concat(\n    'orders batch date: ',\n    pipeline().parameters.pl_file_date\n)",
+										"type": "Expression"
+									},
+									"type": "String"
+								},
+								"PipelineName": {
+									"value": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"type": "String"
+								},
+								"PipelineRunId": {
+									"value": {
+										"value": "@pipeline().RunId",
+										"type": "Expression"
+									},
+									"type": "String"
+								},
+								"SourceName": {
+									"value": "orders",
+									"type": "String"
+								}
+							}
+						},
+						"linkedServiceName": {
+							"referenceName": "ls_azuresql",
+							"type": "LinkedServiceReference"
+						}
 					}
 				],
 				"policy": {
 					"elapsedTimeMetric": {}
+				},
+				"parameters": {
+					"pl_file_date": {
+						"type": "string"
+					}
 				},
 				"annotations": [],
 				"lastPublishTime": "2026-08-19T14:55:27Z"
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/ds_azuresql')]",
-				"[concat(variables('factoryId'), '/dataflows/DataFlowTransformations')]",
-				"[concat(variables('factoryId'), '/pipelines/PL_01_CHECK_AND_INGEST')]"
+				"[concat(variables('factoryId'), '/dataflows/DF_PROCESS_ORDERS')]",
+				"[concat(variables('factoryId'), '/pipelines/PL_01_CHECK_AND_INGEST')]",
+				"[concat(variables('factoryId'), '/linkedServices/ls_azuresql')]"
 			]
 		},
 		{
@@ -362,6 +585,150 @@
 																}
 															}
 														]
+													},
+													{
+														"name": "Success Logging Customers",
+														"type": "SqlServerStoredProcedure",
+														"dependsOn": [
+															{
+																"activity": "Copy customers data",
+																"dependencyConditions": [
+																	"Succeeded"
+																]
+															}
+														],
+														"policy": {
+															"timeout": "0.12:00:00",
+															"retry": 0,
+															"retryIntervalInSeconds": 30,
+															"secureOutput": false,
+															"secureInput": false
+														},
+														"userProperties": [],
+														"typeProperties": {
+															"storedProcedureName": "[[dbo].[usp_Insert_Success_Log]",
+															"storedProcedureParameters": {
+																"ActivityName": {
+																	"value": "Copy Customer Data",
+																	"type": "String"
+																},
+																"FileName": {
+																	"value": {
+																		"value": "@item()",
+																		"type": "Expression"
+																	},
+																	"type": "String"
+																},
+																"PipelineName": {
+																	"value": {
+																		"value": "@pipeline().Pipeline",
+																		"type": "Expression"
+																	},
+																	"type": "String"
+																},
+																"PipelineRunId": {
+																	"value": {
+																		"value": "@pipeline().RunId",
+																		"type": "Expression"
+																	},
+																	"type": "String"
+																},
+																"RowsRead": {
+																	"value": {
+																		"value": "@activity('Copy customers data').output.rowsRead",
+																		"type": "Expression"
+																	},
+																	"type": "Int64"
+																},
+																"RowsWritten": {
+																	"value": {
+																		"value": "@activity('Copy customers data').output.rowsCopied",
+																		"type": "Expression"
+																	},
+																	"type": "Int64"
+																},
+																"SourceName": {
+																	"value": "raw/customers",
+																	"type": "String"
+																}
+															}
+														},
+														"linkedServiceName": {
+															"referenceName": "ls_azuresql",
+															"type": "LinkedServiceReference"
+														}
+													},
+													{
+														"name": "Failure Logging Customers",
+														"type": "SqlServerStoredProcedure",
+														"dependsOn": [
+															{
+																"activity": "Copy customers data",
+																"dependencyConditions": [
+																	"Failed"
+																]
+															}
+														],
+														"policy": {
+															"timeout": "0.12:00:00",
+															"retry": 0,
+															"retryIntervalInSeconds": 30,
+															"secureOutput": false,
+															"secureInput": false
+														},
+														"userProperties": [],
+														"typeProperties": {
+															"storedProcedureName": "[[dbo].[usp_Insert_Failure_Log]",
+															"storedProcedureParameters": {
+																"ActivityName": {
+																	"value": "Copy Customer Data",
+																	"type": "String"
+																},
+																"ErrorCode": {
+																	"value": {
+																		"value": "@activity('Copy customers data').output.error.errorCode",
+																		"type": "Expression"
+																	},
+																	"type": "String"
+																},
+																"ErrorMessage": {
+																	"value": {
+																		"value": "@activity('Copy customers data').output.error.message",
+																		"type": "Expression"
+																	},
+																	"type": "String"
+																},
+																"FileName": {
+																	"value": {
+																		"value": "@item()",
+																		"type": "Expression"
+																	},
+																	"type": "String"
+																},
+																"PipelineName": {
+																	"value": {
+																		"value": "@pipeline().Pipeline",
+																		"type": "Expression"
+																	},
+																	"type": "String"
+																},
+																"PipelineRunId": {
+																	"value": {
+																		"value": "@pipeline().RunId",
+																		"type": "Expression"
+																	},
+																	"type": "String"
+																},
+																"SourceName": {
+																	"value": "raw/customers",
+																	"type": "String"
+																}
+															}
+														},
+														"linkedServiceName": {
+															"referenceName": "ls_azuresql",
+															"type": "LinkedServiceReference"
+														}
 													}
 												]
 											},
@@ -440,6 +807,150 @@
 																}
 															}
 														]
+													},
+													{
+														"name": "Success Logging Products",
+														"type": "SqlServerStoredProcedure",
+														"dependsOn": [
+															{
+																"activity": "Copy products data",
+																"dependencyConditions": [
+																	"Succeeded"
+																]
+															}
+														],
+														"policy": {
+															"timeout": "0.12:00:00",
+															"retry": 0,
+															"retryIntervalInSeconds": 30,
+															"secureOutput": false,
+															"secureInput": false
+														},
+														"userProperties": [],
+														"typeProperties": {
+															"storedProcedureName": "[[dbo].[usp_Insert_Success_Log]",
+															"storedProcedureParameters": {
+																"ActivityName": {
+																	"value": "Copy Products Data",
+																	"type": "String"
+																},
+																"FileName": {
+																	"value": {
+																		"value": "@item()",
+																		"type": "Expression"
+																	},
+																	"type": "String"
+																},
+																"PipelineName": {
+																	"value": {
+																		"value": "@pipeline().Pipeline",
+																		"type": "Expression"
+																	},
+																	"type": "String"
+																},
+																"PipelineRunId": {
+																	"value": {
+																		"value": "@pipeline().RunId",
+																		"type": "Expression"
+																	},
+																	"type": "String"
+																},
+																"RowsRead": {
+																	"value": {
+																		"value": "@activity('Copy products data').output.rowsRead",
+																		"type": "Expression"
+																	},
+																	"type": "Int64"
+																},
+																"RowsWritten": {
+																	"value": {
+																		"value": "@activity('Copy products data').output.rowsCopied",
+																		"type": "Expression"
+																	},
+																	"type": "Int64"
+																},
+																"SourceName": {
+																	"value": "raw/products",
+																	"type": "String"
+																}
+															}
+														},
+														"linkedServiceName": {
+															"referenceName": "ls_azuresql",
+															"type": "LinkedServiceReference"
+														}
+													},
+													{
+														"name": "Failure Logging Products",
+														"type": "SqlServerStoredProcedure",
+														"dependsOn": [
+															{
+																"activity": "Copy products data",
+																"dependencyConditions": [
+																	"Failed"
+																]
+															}
+														],
+														"policy": {
+															"timeout": "0.12:00:00",
+															"retry": 0,
+															"retryIntervalInSeconds": 30,
+															"secureOutput": false,
+															"secureInput": false
+														},
+														"userProperties": [],
+														"typeProperties": {
+															"storedProcedureName": "[[dbo].[usp_Insert_Failure_Log]",
+															"storedProcedureParameters": {
+																"ActivityName": {
+																	"value": "Copy Products Data",
+																	"type": "String"
+																},
+																"ErrorCode": {
+																	"value": {
+																		"value": "@activity('Copy products data').output.error.errorCode",
+																		"type": "Expression"
+																	},
+																	"type": "String"
+																},
+																"ErrorMessage": {
+																	"value": {
+																		"value": "@activity('Copy products data').output.error.message",
+																		"type": "Expression"
+																	},
+																	"type": "String"
+																},
+																"FileName": {
+																	"value": {
+																		"value": "@item()",
+																		"type": "Expression"
+																	},
+																	"type": "String"
+																},
+																"PipelineName": {
+																	"value": {
+																		"value": "@pipeline().Pipeline",
+																		"type": "Expression"
+																	},
+																	"type": "String"
+																},
+																"PipelineRunId": {
+																	"value": {
+																		"value": "@pipeline().RunId",
+																		"type": "Expression"
+																	},
+																	"type": "String"
+																},
+																"SourceName": {
+																	"value": "raw/products",
+																	"type": "String"
+																}
+															}
+														},
+														"linkedServiceName": {
+															"referenceName": "ls_azuresql",
+															"type": "LinkedServiceReference"
+														}
 													}
 												]
 											},
@@ -518,6 +1029,150 @@
 																}
 															}
 														]
+													},
+													{
+														"name": "Success Logging Orders",
+														"type": "SqlServerStoredProcedure",
+														"dependsOn": [
+															{
+																"activity": "Copy orders data",
+																"dependencyConditions": [
+																	"Succeeded"
+																]
+															}
+														],
+														"policy": {
+															"timeout": "0.12:00:00",
+															"retry": 0,
+															"retryIntervalInSeconds": 30,
+															"secureOutput": false,
+															"secureInput": false
+														},
+														"userProperties": [],
+														"typeProperties": {
+															"storedProcedureName": "[[dbo].[usp_Insert_Success_Log]",
+															"storedProcedureParameters": {
+																"ActivityName": {
+																	"value": "Copy Orders Data",
+																	"type": "String"
+																},
+																"FileName": {
+																	"value": {
+																		"value": "@item()",
+																		"type": "Expression"
+																	},
+																	"type": "String"
+																},
+																"PipelineName": {
+																	"value": {
+																		"value": "@pipeline().Pipeline",
+																		"type": "Expression"
+																	},
+																	"type": "String"
+																},
+																"PipelineRunId": {
+																	"value": {
+																		"value": "@pipeline().RunId",
+																		"type": "Expression"
+																	},
+																	"type": "String"
+																},
+																"RowsRead": {
+																	"value": {
+																		"value": "@activity('Copy orders data').output.rowsRead",
+																		"type": "Expression"
+																	},
+																	"type": "Int64"
+																},
+																"RowsWritten": {
+																	"value": {
+																		"value": "@activity('Copy orders data').output.rowsCopied",
+																		"type": "Expression"
+																	},
+																	"type": "Int64"
+																},
+																"SourceName": {
+																	"value": "raw/orders",
+																	"type": "String"
+																}
+															}
+														},
+														"linkedServiceName": {
+															"referenceName": "ls_azuresql",
+															"type": "LinkedServiceReference"
+														}
+													},
+													{
+														"name": "Failure Logging Orders",
+														"type": "SqlServerStoredProcedure",
+														"dependsOn": [
+															{
+																"activity": "Copy orders data",
+																"dependencyConditions": [
+																	"Failed"
+																]
+															}
+														],
+														"policy": {
+															"timeout": "0.12:00:00",
+															"retry": 0,
+															"retryIntervalInSeconds": 30,
+															"secureOutput": false,
+															"secureInput": false
+														},
+														"userProperties": [],
+														"typeProperties": {
+															"storedProcedureName": "[[dbo].[usp_Insert_Failure_Log]",
+															"storedProcedureParameters": {
+																"ActivityName": {
+																	"value": "Copy Orders Data",
+																	"type": "String"
+																},
+																"ErrorCode": {
+																	"value": {
+																		"value": "@activity('Copy orders data').output.error.errorCode",
+																		"type": "Expression"
+																	},
+																	"type": "String"
+																},
+																"ErrorMessage": {
+																	"value": {
+																		"value": "@activity('Copy orders data').output.error.message",
+																		"type": "Expression"
+																	},
+																	"type": "String"
+																},
+																"FileName": {
+																	"value": {
+																		"value": "@item()",
+																		"type": "Expression"
+																	},
+																	"type": "String"
+																},
+																"PipelineName": {
+																	"value": {
+																		"value": "@pipeline().Pipeline",
+																		"type": "Expression"
+																	},
+																	"type": "String"
+																},
+																"PipelineRunId": {
+																	"value": {
+																		"value": "@pipeline().RunId",
+																		"type": "Expression"
+																	},
+																	"type": "String"
+																},
+																"SourceName": {
+																	"value": "raw/orders",
+																	"type": "String"
+																}
+															}
+														},
+														"linkedServiceName": {
+															"referenceName": "ls_azuresql",
+															"type": "LinkedServiceReference"
+														}
 													}
 												]
 											},
@@ -596,6 +1251,150 @@
 																}
 															}
 														]
+													},
+													{
+														"name": "Success Logging Payment_returns",
+														"type": "SqlServerStoredProcedure",
+														"dependsOn": [
+															{
+																"activity": "Copy payments_returns  data",
+																"dependencyConditions": [
+																	"Succeeded"
+																]
+															}
+														],
+														"policy": {
+															"timeout": "0.12:00:00",
+															"retry": 0,
+															"retryIntervalInSeconds": 30,
+															"secureOutput": false,
+															"secureInput": false
+														},
+														"userProperties": [],
+														"typeProperties": {
+															"storedProcedureName": "[[dbo].[usp_Insert_Success_Log]",
+															"storedProcedureParameters": {
+																"ActivityName": {
+																	"value": "Copy Payment Returns Data",
+																	"type": "String"
+																},
+																"FileName": {
+																	"value": {
+																		"value": "item()",
+																		"type": "Expression"
+																	},
+																	"type": "String"
+																},
+																"PipelineName": {
+																	"value": {
+																		"value": "@pipeline().Pipeline",
+																		"type": "Expression"
+																	},
+																	"type": "String"
+																},
+																"PipelineRunId": {
+																	"value": {
+																		"value": "@pipeline().RunId",
+																		"type": "Expression"
+																	},
+																	"type": "String"
+																},
+																"RowsRead": {
+																	"value": {
+																		"value": "@activity('Copy payments_returns  data').output.rowsRead",
+																		"type": "Expression"
+																	},
+																	"type": "Int64"
+																},
+																"RowsWritten": {
+																	"value": {
+																		"value": "@activity('Copy payments_returns  data').output.rowsCopied",
+																		"type": "Expression"
+																	},
+																	"type": "Int64"
+																},
+																"SourceName": {
+																	"value": "raw/payments_returns",
+																	"type": "String"
+																}
+															}
+														},
+														"linkedServiceName": {
+															"referenceName": "ls_azuresql",
+															"type": "LinkedServiceReference"
+														}
+													},
+													{
+														"name": "Failure Logging Payments_Returns",
+														"type": "SqlServerStoredProcedure",
+														"dependsOn": [
+															{
+																"activity": "Copy payments_returns  data",
+																"dependencyConditions": [
+																	"Failed"
+																]
+															}
+														],
+														"policy": {
+															"timeout": "0.12:00:00",
+															"retry": 0,
+															"retryIntervalInSeconds": 30,
+															"secureOutput": false,
+															"secureInput": false
+														},
+														"userProperties": [],
+														"typeProperties": {
+															"storedProcedureName": "[[dbo].[usp_Insert_Failure_Log]",
+															"storedProcedureParameters": {
+																"ActivityName": {
+																	"value": "Copy Payments_Returns Data",
+																	"type": "String"
+																},
+																"ErrorCode": {
+																	"value": {
+																		"value": "@activity('Copy payments_returns  data').output.error.errorCode",
+																		"type": "Expression"
+																	},
+																	"type": "String"
+																},
+																"ErrorMessage": {
+																	"value": {
+																		"value": "@activity('Copy payments_returns  data').output.error.message",
+																		"type": "Expression"
+																	},
+																	"type": "String"
+																},
+																"FileName": {
+																	"value": {
+																		"value": "@item()",
+																		"type": "Expression"
+																	},
+																	"type": "String"
+																},
+																"PipelineName": {
+																	"value": {
+																		"value": "@pipeline().Pipeline",
+																		"type": "Expression"
+																	},
+																	"type": "String"
+																},
+																"PipelineRunId": {
+																	"value": {
+																		"value": "@pipeline().RunId",
+																		"type": "Expression"
+																	},
+																	"type": "String"
+																},
+																"SourceName": {
+																	"value": "raw/payments_returns",
+																	"type": "String"
+																}
+															}
+														},
+														"linkedServiceName": {
+															"referenceName": "ls_azuresql",
+															"type": "LinkedServiceReference"
+														}
 													}
 												]
 											}
@@ -637,6 +1436,7 @@
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/ds_blob_storage')]",
 				"[concat(variables('factoryId'), '/datasets/ds_adls')]",
+				"[concat(variables('factoryId'), '/linkedServices/ls_azuresql')]",
 				"[concat(variables('factoryId'), '/datasets/ds_blob')]"
 			]
 		},
@@ -1340,7 +2140,7 @@
 			"dependsOn": []
 		},
 		{
-			"name": "[concat(parameters('factoryName'), '/DataFlowTransformations')]",
+			"name": "[concat(parameters('factoryName'), '/DF_PROCESS_ORDERS')]",
 			"type": "Microsoft.DataFactory/factories/dataflows",
 			"apiVersion": "2018-06-01",
 			"properties": {
@@ -1400,7 +2200,10 @@
 								"referenceName": "ds_df_adls",
 								"type": "DatasetReference"
 							},
-							"name": "SummarySink"
+							"name": "CuratedSummarySink"
+						},
+						{
+							"name": "HwmCache"
 						}
 					],
 					"transformations": [
@@ -1477,7 +2280,8 @@
 					],
 					"scriptLines": [
 						"parameters{",
-						"     pl_hwm as string ('1900-01-01 00:00:00.000')",
+						"     pl_hwm as string ('1900-01-01 00:00:00.000'),",
+						"     pl_file_date as string ('1900-01-01 00:00:00.000')",
 						"}",
 						"source(output(",
 						"          order_id as string,",
@@ -1702,28 +2506,45 @@
 						"          total_refund = round(sum(refund_amount))) ~> AggStoreSummary",
 						"ValidColumns sink(allowSchemaDrift: true,",
 						"     validateSchema: false,",
+						"     partitionFileNames:[(concat('orders_', $pl_file_date,'.csv'))],",
 						"     umask: 0022,",
 						"     preCommands: [],",
 						"     postCommands: [],",
 						"     skipDuplicateMapInputs: true,",
 						"     skipDuplicateMapOutputs: true,",
+						"     saveOrder: 2,",
 						"     outputAssertFailedRows: true,",
 						"     assertFailure_fileSystem: 'curated',",
-						"     assertFailure_folderPath: 'Failure_rows') ~> CuratedOrdersSink",
+						"     assertFailure_folderPath: 'Failure_rows',",
+						"     partitionBy('hash', 1)) ~> CuratedOrdersSink",
 						"ValidInvalid@invalid sink(allowSchemaDrift: true,",
 						"     validateSchema: false,",
+						"     partitionFileNames:[(concat('rejected_orders_', $pl_file_date,'.csv'))],",
 						"     umask: 0022,",
 						"     preCommands: [],",
 						"     postCommands: [],",
 						"     skipDuplicateMapInputs: true,",
-						"     skipDuplicateMapOutputs: true) ~> InvalidOrdersSink",
+						"     skipDuplicateMapOutputs: true,",
+						"     saveOrder: 2,",
+						"     partitionBy('hash', 1)) ~> InvalidOrdersSink",
 						"AggStoreSummary sink(allowSchemaDrift: true,",
 						"     validateSchema: false,",
+						"     partitionFileNames:[(concat('store_product_summary_', $pl_file_date,'.csv'))],",
 						"     umask: 0022,",
 						"     preCommands: [],",
 						"     postCommands: [],",
 						"     skipDuplicateMapInputs: true,",
-						"     skipDuplicateMapOutputs: true) ~> SummarySink"
+						"     skipDuplicateMapOutputs: true,",
+						"     saveOrder: 2,",
+						"     partitionBy('hash', 1)) ~> CuratedSummarySink",
+						"NewHWM sink(validateSchema: false,",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     keys:['new_hwm'],",
+						"     store: 'cache',",
+						"     format: 'inline',",
+						"     output: true,",
+						"     saveOrder: 1) ~> HwmCache"
 					]
 				}
 			},
