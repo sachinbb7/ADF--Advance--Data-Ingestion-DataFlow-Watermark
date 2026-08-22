@@ -397,7 +397,6 @@
 				"NewHWM sink(validateSchema: false,",
 				"     skipDuplicateMapInputs: true,",
 				"     skipDuplicateMapOutputs: true,",
-				"     keys:['new_hwm'],",
 				"     store: 'cache',",
 				"     format: 'inline',",
 				"     output: true,",
