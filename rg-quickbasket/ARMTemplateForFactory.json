@@ -1,0 +1,1740 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "rg-quickbasket"
+		},
+		"ds_azuresql_password": {
+			"type": "secureString",
+			"metadata": "Secure string for 'password' of 'ds_azuresql'"
+		},
+		"ls_adls_accountKey": {
+			"type": "secureString",
+			"metadata": "Secure string for 'accountKey' of 'ls_adls'"
+		},
+		"ls_azuresql_password": {
+			"type": "secureString",
+			"metadata": "Secure string for 'password' of 'ls_azuresql'"
+		},
+		"ls_blob_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'ls_blob'"
+		},
+		"ds_azuresql_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "serverquickbasket.database.windows.net"
+		},
+		"ds_azuresql_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "dbqucikbasket"
+		},
+		"ds_azuresql_properties_typeProperties_userName": {
+			"type": "string",
+			"defaultValue": "sbb"
+		},
+		"ls_adls_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://saadlsquickbasket.dfs.core.windows.net/"
+		},
+		"ls_azuresql_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "serverquickbasket.database.windows.net"
+		},
+		"ls_azuresql_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "dbqucikbasket"
+		},
+		"ls_azuresql_properties_typeProperties_userName": {
+			"type": "string",
+			"defaultValue": "sbb"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('factoryName'), '/PL_01_CHECK_AND_INGEST')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "exec_until",
+						"type": "ExecutePipeline",
+						"dependsOn": [],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_until",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					},
+					{
+						"name": "exec_ingestion",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "exec_until",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_data_ingestion",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"annotations": [],
+				"lastPublishTime": "2026-08-18T14:51:00Z"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/pipelines/pl_until')]",
+				"[concat(variables('factoryId'), '/pipelines/pl_data_ingestion')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/PL_02_PROCESS_ORDERS')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Lookup HWM",
+						"type": "Lookup",
+						"dependsOn": [
+							{
+								"activity": "Execute untill and ingestion",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "AzureSqlSource",
+								"sqlReaderQuery": {
+									"value": "SELECT\n    MAX(last_processed_timestamp) AS previous_hwm\nFROM dbo.etl_watermark\nWHERE source_name = 'orders';",
+									"type": "Expression"
+								},
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "ds_azuresql",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						}
+					},
+					{
+						"name": "Data flow1",
+						"type": "ExecuteDataFlow",
+						"dependsOn": [
+							{
+								"activity": "Lookup HWM",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataflow": {
+								"referenceName": "DataFlowTransformations",
+								"type": "DataFlowReference",
+								"parameters": {
+									"pl_hwm": "'1900-01-01 00:00:00.000'"
+								},
+								"datasetParameters": {
+									"RawOrders": {},
+									"RawCustomers": {},
+									"RawProducts": {},
+									"RawPaymentReturns": {},
+									"CuratedOrdersSink": {
+										"ds_folder": "orders",
+										"ds_file": {
+											"value": "@concat(\n    'orders_',\n    formatDateTime(utcNow(),'yyyyMMdd'),\n    '.csv'\n)",
+											"type": "Expression"
+										},
+										"ds_container": "curated"
+									},
+									"InvalidOrdersSink": {
+										"ds_folder": "orders",
+										"ds_file": {
+											"value": "@concat(\n    'rejected_orders_',\n    formatDateTime(utcNow(),'yyyyMMdd'),\n    '.csv'\n)",
+											"type": "Expression"
+										},
+										"ds_container": "rejected"
+									},
+									"SummarySink": {
+										"ds_folder": "store_product_summary",
+										"ds_file": {
+											"value": "@concat(\n    'store_product_summary_',\n    formatDateTime(utcNow(),'yyyyMMdd'),\n    '.csv'\n)",
+											"type": "Expression"
+										},
+										"ds_container": "curated"
+									}
+								}
+							},
+							"staging": {},
+							"compute": {
+								"coreCount": 8,
+								"computeType": "General"
+							},
+							"traceLevel": "Fine"
+						}
+					},
+					{
+						"name": "Execute untill and ingestion",
+						"type": "ExecutePipeline",
+						"dependsOn": [],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "PL_01_CHECK_AND_INGEST",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"annotations": [],
+				"lastPublishTime": "2026-08-19T14:55:27Z"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/ds_azuresql')]",
+				"[concat(variables('factoryId'), '/dataflows/DataFlowTransformations')]",
+				"[concat(variables('factoryId'), '/pipelines/PL_01_CHECK_AND_INGEST')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/pl_data_ingestion')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "ForEach1",
+						"type": "ForEach",
+						"dependsOn": [
+							{
+								"activity": "array-files",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@variables('v_files_array')",
+								"type": "Expression"
+							},
+							"activities": [
+								{
+									"name": "Switch",
+									"type": "Switch",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"on": {
+											"value": "@if(startswith(item(),'customer'),'customers',\nif(startswith(item(),'orders_'),'orders',\nif(startswith(item(),'payments_'),'payments_returns',\nif(startswith(item(),'product'),'products','unknown'\n)   \n)\n)\n)",
+											"type": "Expression"
+										},
+										"cases": [
+											{
+												"value": "customers",
+												"activities": [
+													{
+														"name": "Copy customers data",
+														"type": "Copy",
+														"dependsOn": [],
+														"policy": {
+															"timeout": "0.12:00:00",
+															"retry": 0,
+															"retryIntervalInSeconds": 30,
+															"secureOutput": false,
+															"secureInput": false
+														},
+														"userProperties": [],
+														"typeProperties": {
+															"source": {
+																"type": "DelimitedTextSource",
+																"storeSettings": {
+																	"type": "AzureBlobStorageReadSettings",
+																	"recursive": true,
+																	"enablePartitionDiscovery": false
+																},
+																"formatSettings": {
+																	"type": "DelimitedTextReadSettings"
+																}
+															},
+															"sink": {
+																"type": "DelimitedTextSink",
+																"storeSettings": {
+																	"type": "AzureBlobFSWriteSettings",
+																	"copyBehavior": "PreserveHierarchy"
+																},
+																"formatSettings": {
+																	"type": "DelimitedTextWriteSettings",
+																	"quoteAllText": true,
+																	"fileExtension": ".txt"
+																}
+															},
+															"enableStaging": false,
+															"translator": {
+																"type": "TabularTranslator",
+																"typeConversion": true,
+																"typeConversionSettings": {
+																	"allowDataTruncation": true,
+																	"treatBooleanAsNumber": false
+																}
+															}
+														},
+														"inputs": [
+															{
+																"referenceName": "ds_blob_storage",
+																"type": "DatasetReference",
+																"parameters": {
+																	"ds_folder_name": "customers",
+																	"ds_file_name": {
+																		"value": "@item()",
+																		"type": "Expression"
+																	}
+																}
+															}
+														],
+														"outputs": [
+															{
+																"referenceName": "ds_adls",
+																"type": "DatasetReference",
+																"parameters": {
+																	"ds_folder_name": "customers",
+																	"ds_file_name": {
+																		"value": "@item()\n",
+																		"type": "Expression"
+																	}
+																}
+															}
+														]
+													}
+												]
+											},
+											{
+												"value": "products",
+												"activities": [
+													{
+														"name": "Copy products data",
+														"type": "Copy",
+														"dependsOn": [],
+														"policy": {
+															"timeout": "0.12:00:00",
+															"retry": 0,
+															"retryIntervalInSeconds": 30,
+															"secureOutput": false,
+															"secureInput": false
+														},
+														"userProperties": [],
+														"typeProperties": {
+															"source": {
+																"type": "DelimitedTextSource",
+																"storeSettings": {
+																	"type": "AzureBlobStorageReadSettings",
+																	"recursive": true,
+																	"enablePartitionDiscovery": false
+																},
+																"formatSettings": {
+																	"type": "DelimitedTextReadSettings"
+																}
+															},
+															"sink": {
+																"type": "DelimitedTextSink",
+																"storeSettings": {
+																	"type": "AzureBlobFSWriteSettings",
+																	"copyBehavior": "PreserveHierarchy"
+																},
+																"formatSettings": {
+																	"type": "DelimitedTextWriteSettings",
+																	"quoteAllText": true,
+																	"fileExtension": ".txt"
+																}
+															},
+															"enableStaging": false,
+															"translator": {
+																"type": "TabularTranslator",
+																"typeConversion": true,
+																"typeConversionSettings": {
+																	"allowDataTruncation": true,
+																	"treatBooleanAsNumber": false
+																}
+															}
+														},
+														"inputs": [
+															{
+																"referenceName": "ds_blob",
+																"type": "DatasetReference",
+																"parameters": {
+																	"ds_folder_name": "products",
+																	"ds_file_name": {
+																		"value": "@item()",
+																		"type": "Expression"
+																	}
+																}
+															}
+														],
+														"outputs": [
+															{
+																"referenceName": "ds_adls",
+																"type": "DatasetReference",
+																"parameters": {
+																	"ds_folder_name": "products",
+																	"ds_file_name": {
+																		"value": "@item()\n",
+																		"type": "Expression"
+																	}
+																}
+															}
+														]
+													}
+												]
+											},
+											{
+												"value": "orders",
+												"activities": [
+													{
+														"name": "Copy orders data",
+														"type": "Copy",
+														"dependsOn": [],
+														"policy": {
+															"timeout": "0.12:00:00",
+															"retry": 0,
+															"retryIntervalInSeconds": 30,
+															"secureOutput": false,
+															"secureInput": false
+														},
+														"userProperties": [],
+														"typeProperties": {
+															"source": {
+																"type": "DelimitedTextSource",
+																"storeSettings": {
+																	"type": "AzureBlobStorageReadSettings",
+																	"recursive": true,
+																	"enablePartitionDiscovery": false
+																},
+																"formatSettings": {
+																	"type": "DelimitedTextReadSettings"
+																}
+															},
+															"sink": {
+																"type": "DelimitedTextSink",
+																"storeSettings": {
+																	"type": "AzureBlobFSWriteSettings",
+																	"copyBehavior": "PreserveHierarchy"
+																},
+																"formatSettings": {
+																	"type": "DelimitedTextWriteSettings",
+																	"quoteAllText": true,
+																	"fileExtension": ".txt"
+																}
+															},
+															"enableStaging": false,
+															"translator": {
+																"type": "TabularTranslator",
+																"typeConversion": true,
+																"typeConversionSettings": {
+																	"allowDataTruncation": true,
+																	"treatBooleanAsNumber": false
+																}
+															}
+														},
+														"inputs": [
+															{
+																"referenceName": "ds_blob",
+																"type": "DatasetReference",
+																"parameters": {
+																	"ds_folder_name": "orders",
+																	"ds_file_name": {
+																		"value": "@item()\n",
+																		"type": "Expression"
+																	}
+																}
+															}
+														],
+														"outputs": [
+															{
+																"referenceName": "ds_adls",
+																"type": "DatasetReference",
+																"parameters": {
+																	"ds_folder_name": "orders",
+																	"ds_file_name": {
+																		"value": "@item()\n",
+																		"type": "Expression"
+																	}
+																}
+															}
+														]
+													}
+												]
+											},
+											{
+												"value": "payments_returns",
+												"activities": [
+													{
+														"name": "Copy payments_returns  data",
+														"type": "Copy",
+														"dependsOn": [],
+														"policy": {
+															"timeout": "0.12:00:00",
+															"retry": 0,
+															"retryIntervalInSeconds": 30,
+															"secureOutput": false,
+															"secureInput": false
+														},
+														"userProperties": [],
+														"typeProperties": {
+															"source": {
+																"type": "DelimitedTextSource",
+																"storeSettings": {
+																	"type": "AzureBlobStorageReadSettings",
+																	"recursive": true,
+																	"enablePartitionDiscovery": false
+																},
+																"formatSettings": {
+																	"type": "DelimitedTextReadSettings"
+																}
+															},
+															"sink": {
+																"type": "DelimitedTextSink",
+																"storeSettings": {
+																	"type": "AzureBlobFSWriteSettings",
+																	"copyBehavior": "PreserveHierarchy"
+																},
+																"formatSettings": {
+																	"type": "DelimitedTextWriteSettings",
+																	"quoteAllText": true,
+																	"fileExtension": ".txt"
+																}
+															},
+															"enableStaging": false,
+															"translator": {
+																"type": "TabularTranslator",
+																"typeConversion": true,
+																"typeConversionSettings": {
+																	"allowDataTruncation": true,
+																	"treatBooleanAsNumber": false
+																}
+															}
+														},
+														"inputs": [
+															{
+																"referenceName": "ds_blob",
+																"type": "DatasetReference",
+																"parameters": {
+																	"ds_folder_name": "payments_returns",
+																	"ds_file_name": {
+																		"value": "@item()\n",
+																		"type": "Expression"
+																	}
+																}
+															}
+														],
+														"outputs": [
+															{
+																"referenceName": "ds_adls",
+																"type": "DatasetReference",
+																"parameters": {
+																	"ds_folder_name": "payments_returns",
+																	"ds_file_name": {
+																		"value": "@item()\n",
+																		"type": "Expression"
+																	}
+																}
+															}
+														]
+													}
+												]
+											}
+										]
+									}
+								}
+							]
+						}
+					},
+					{
+						"name": "array-files",
+						"type": "SetVariable",
+						"dependsOn": [],
+						"policy": {
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "v_files_array",
+							"value": {
+								"value": "@createArray(\n    'customers.csv',\n    'products.csv',\n    concat(\n        'orders_',\n        formatDateTime(\n            convertFromUtc(\n                pipeline().TriggerTime,\n                'India Standard Time'\n            ),\n            'yyyyMMdd'\n        ),\n        '.csv'\n    ),\n    concat(\n        'payments_returns_',\n        formatDateTime(\n            convertFromUtc(\n                pipeline().TriggerTime,\n                'India Standard Time'\n            ),\n            'yyyyMMdd'\n        ),\n        '.csv'\n    )\n)",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"variables": {
+					"v_files_array": {
+						"type": "Array"
+					}
+				},
+				"annotations": [],
+				"lastPublishTime": "2026-08-18T14:51:00Z"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/ds_blob_storage')]",
+				"[concat(variables('factoryId'), '/datasets/ds_adls')]",
+				"[concat(variables('factoryId'), '/datasets/ds_blob')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/pl_until')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Until",
+						"type": "Until",
+						"dependsOn": [],
+						"userProperties": [],
+						"typeProperties": {
+							"expression": {
+								"value": "@equals(variables('v_files_ready'),true)",
+								"type": "Expression"
+							},
+							"activities": [
+								{
+									"name": "Get Metadata of customers",
+									"type": "GetMetadata",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"dataset": {
+											"referenceName": "ds_blob",
+											"type": "DatasetReference",
+											"parameters": {
+												"ds_folder_name": "customers",
+												"ds_file_name": "customers.csv"
+											}
+										},
+										"fieldList": [
+											"exists"
+										],
+										"storeSettings": {
+											"type": "AzureBlobStorageReadSettings",
+											"recursive": true,
+											"enablePartitionDiscovery": false
+										},
+										"formatSettings": {
+											"type": "DelimitedTextReadSettings"
+										}
+									}
+								},
+								{
+									"name": "Get Metadata of products",
+									"type": "GetMetadata",
+									"dependsOn": [
+										{
+											"activity": "Get Metadata of customers",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"dataset": {
+											"referenceName": "ds_blob",
+											"type": "DatasetReference",
+											"parameters": {
+												"ds_folder_name": "products",
+												"ds_file_name": "products.csv"
+											}
+										},
+										"fieldList": [
+											"exists"
+										],
+										"storeSettings": {
+											"type": "AzureBlobStorageReadSettings",
+											"recursive": true,
+											"enablePartitionDiscovery": false
+										},
+										"formatSettings": {
+											"type": "DelimitedTextReadSettings"
+										}
+									}
+								},
+								{
+									"name": "Get Metadata of orders",
+									"type": "GetMetadata",
+									"dependsOn": [
+										{
+											"activity": "Get Metadata of products",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"dataset": {
+											"referenceName": "ds_blob",
+											"type": "DatasetReference",
+											"parameters": {
+												"ds_folder_name": "orders",
+												"ds_file_name": {
+													"value": "@concat('orders_',formatDateTime(convertFromUtc(pipeline().TriggerTime,'India Standard Time'),'yyyyMMdd'),'.csv')",
+													"type": "Expression"
+												}
+											}
+										},
+										"fieldList": [
+											"exists"
+										],
+										"storeSettings": {
+											"type": "AzureBlobStorageReadSettings",
+											"recursive": true,
+											"enablePartitionDiscovery": false
+										},
+										"formatSettings": {
+											"type": "DelimitedTextReadSettings"
+										}
+									}
+								},
+								{
+									"name": "Get Metadata of payment_returns",
+									"type": "GetMetadata",
+									"dependsOn": [
+										{
+											"activity": "Get Metadata of orders",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"dataset": {
+											"referenceName": "ds_blob",
+											"type": "DatasetReference",
+											"parameters": {
+												"ds_folder_name": "payments_returns",
+												"ds_file_name": {
+													"value": "@concat('payments_returns_',formatDateTime(convertFromUtc(pipeline().TriggerTime,'India Standard Time'),'yyyyMMdd'),'.csv')",
+													"type": "Expression"
+												}
+											}
+										},
+										"fieldList": [
+											"exists"
+										],
+										"storeSettings": {
+											"type": "AzureBlobStorageReadSettings",
+											"recursive": true,
+											"enablePartitionDiscovery": false
+										},
+										"formatSettings": {
+											"type": "DelimitedTextReadSettings"
+										}
+									}
+								},
+								{
+									"name": "files_ready",
+									"type": "SetVariable",
+									"dependsOn": [
+										{
+											"activity": "Get Metadata of payment_returns",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"variableName": "v_files_ready",
+										"value": {
+											"value": "@and(\n    and(activity('Get Metadata of customers').output.exists,activity('Get Metadata of orders').output.exists),\n\nand(activity('Get Metadata of payment_returns').output.exists,activity('Get Metadata of products').output.exists)\n)",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"timeout": "0.12:00:00"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"parameters": {
+					"pl_folder_name": {
+						"type": "string"
+					},
+					"pl_file_name": {
+						"type": "string"
+					}
+				},
+				"variables": {
+					"v_files_ready": {
+						"type": "Boolean"
+					}
+				},
+				"annotations": [],
+				"lastPublishTime": "2026-08-18T13:31:55Z"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/ds_blob')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_adls')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_adls",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"ds_folder_name": {
+						"type": "string"
+					},
+					"ds_file_name": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": "orders",
+						"fileSystem": "raw"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_adls')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_azuresql')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_azuresql",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "AzureSqlTable",
+				"schema": [
+					{
+						"name": "source_name",
+						"type": "varchar"
+					},
+					{
+						"name": "last_processed_timestamp",
+						"type": "datetime",
+						"precision": 23,
+						"scale": 3
+					}
+				],
+				"typeProperties": {
+					"schema": "dbo",
+					"table": "etl_watermark"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_azuresql')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_blob')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_blob",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"ds_folder_name": {
+						"type": "string"
+					},
+					"ds_file_name": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobStorageLocation",
+						"fileName": {
+							"value": "@dataset().ds_file_name",
+							"type": "Expression"
+						},
+						"folderPath": {
+							"value": "@dataset().ds_folder_name",
+							"type": "Expression"
+						},
+						"container": "input"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": [
+					{
+						"name": "customer_id",
+						"type": "String"
+					},
+					{
+						"name": "customer_name",
+						"type": "String"
+					},
+					{
+						"name": "city",
+						"type": "String"
+					},
+					{
+						"name": "membership",
+						"type": "String"
+					}
+				]
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_blob')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_blob_storage')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_blob",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"ds_folder_name": {
+						"type": "string"
+					},
+					"ds_file_name": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobStorageLocation",
+						"fileName": {
+							"value": "@dataset().ds_file_name",
+							"type": "Expression"
+						},
+						"folderPath": {
+							"value": "@dataset().ds_folder_name",
+							"type": "Expression"
+						},
+						"container": "input"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": [
+					{
+						"name": "customer_id",
+						"type": "String"
+					},
+					{
+						"name": "customer_name",
+						"type": "String"
+					},
+					{
+						"name": "city",
+						"type": "String"
+					},
+					{
+						"name": "membership",
+						"type": "String"
+					}
+				]
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_blob')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_df_adls')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_adls",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"ds_folder": {
+						"type": "String"
+					},
+					"ds_file": {
+						"type": "String"
+					},
+					"ds_container": {
+						"type": "String"
+					}
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": {
+							"value": "@dataset().ds_file",
+							"type": "Expression"
+						},
+						"folderPath": {
+							"value": "@dataset().ds_folder",
+							"type": "Expression"
+						},
+						"fileSystem": {
+							"value": "@dataset().ds_container",
+							"type": "Expression"
+						}
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_adls')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_df_customers')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_adls",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": "customers.csv",
+						"folderPath": "customers",
+						"fileSystem": "raw"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": [
+					{
+						"name": "customer_id",
+						"type": "String"
+					},
+					{
+						"name": "customer_name",
+						"type": "String"
+					},
+					{
+						"name": "city",
+						"type": "String"
+					},
+					{
+						"name": "membership",
+						"type": "String"
+					}
+				]
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_adls')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_df_orders')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_adls",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": "orders",
+						"fileSystem": "raw"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": ""
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_adls')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_df_payment_returns')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_adls",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": "payments_returns",
+						"fileSystem": "raw"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_adls')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_df_products')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_adls",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": "products.csv",
+						"folderPath": "products",
+						"fileSystem": "raw"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": [
+					{
+						"name": "product_id",
+						"type": "String"
+					},
+					{
+						"name": "product_name",
+						"type": "String"
+					},
+					{
+						"name": "brand",
+						"type": "String"
+					},
+					{
+						"name": "category",
+						"type": "String"
+					},
+					{
+						"name": "store_id",
+						"type": "String"
+					},
+					{
+						"name": "mrp",
+						"type": "String"
+					}
+				]
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_adls')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_azuresql')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureSqlDatabase",
+				"typeProperties": {
+					"server": "[parameters('ds_azuresql_properties_typeProperties_server')]",
+					"database": "[parameters('ds_azuresql_properties_typeProperties_database')]",
+					"encrypt": "mandatory",
+					"trustServerCertificate": false,
+					"authenticationType": "SQL",
+					"userName": "[parameters('ds_azuresql_properties_typeProperties_userName')]",
+					"password": {
+						"type": "SecureString",
+						"value": "[parameters('ds_azuresql_password')]"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ls_adls')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobFS",
+				"typeProperties": {
+					"url": "[parameters('ls_adls_properties_typeProperties_url')]",
+					"accountKey": {
+						"type": "SecureString",
+						"value": "[parameters('ls_adls_accountKey')]"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ls_azuresql')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureSqlDatabase",
+				"typeProperties": {
+					"server": "[parameters('ls_azuresql_properties_typeProperties_server')]",
+					"database": "[parameters('ls_azuresql_properties_typeProperties_database')]",
+					"encrypt": "mandatory",
+					"trustServerCertificate": false,
+					"authenticationType": "SQL",
+					"userName": "[parameters('ls_azuresql_properties_typeProperties_userName')]",
+					"password": {
+						"type": "SecureString",
+						"value": "[parameters('ls_azuresql_password')]"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ls_blob')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobStorage",
+				"typeProperties": {
+					"connectionString": "[parameters('ls_blob_connectionString')]"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/DataFlowTransformations')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_df_orders",
+								"type": "DatasetReference"
+							},
+							"name": "RawOrders"
+						},
+						{
+							"dataset": {
+								"referenceName": "ds_df_customers",
+								"type": "DatasetReference"
+							},
+							"name": "RawCustomers"
+						},
+						{
+							"dataset": {
+								"referenceName": "ds_df_products",
+								"type": "DatasetReference"
+							},
+							"name": "RawProducts"
+						},
+						{
+							"dataset": {
+								"referenceName": "ds_df_payment_returns",
+								"type": "DatasetReference"
+							},
+							"name": "RawPaymentReturns"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_df_adls",
+								"type": "DatasetReference"
+							},
+							"name": "CuratedOrdersSink",
+							"rejectedDataLinkedService": {
+								"referenceName": "ls_adls",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"dataset": {
+								"referenceName": "ds_df_adls",
+								"type": "DatasetReference"
+							},
+							"name": "InvalidOrdersSink"
+						},
+						{
+							"dataset": {
+								"referenceName": "ds_df_adls",
+								"type": "DatasetReference"
+							},
+							"name": "SummarySink"
+						}
+					],
+					"transformations": [
+						{
+							"name": "FilterHWM"
+						},
+						{
+							"name": "DerivedColumns"
+						},
+						{
+							"name": "NewHWM"
+						},
+						{
+							"name": "WindowDuplicateRecords"
+						},
+						{
+							"name": "CustomersCleanup",
+							"description": "trimmed customer name and also renamed the NULL or empty string values of \"city\" to \"UNKNOWN\""
+						},
+						{
+							"name": "RemoveDuplicates",
+							"description": "Removed duplicate customer_id"
+						},
+						{
+							"name": "lookupCustomers"
+						},
+						{
+							"name": "Select",
+							"description": "Renaming customer_id to master_customer_id to avoid confusion at the time of customer lookup in orders stream"
+						},
+						{
+							"name": "DeriveCustomerExists",
+							"description": "Creating new column to check if the customer exists in the master customer table.If not, then we will mark FALSE"
+						},
+						{
+							"name": "lookupProducts"
+						},
+						{
+							"name": "SelectProduct",
+							"description": "Renaming product_id to master_product_id to avoid confusion at the time of products lookup"
+						},
+						{
+							"name": "DeriveProductsExists",
+							"description": "Creating new column to check if the products exists in the master product table.If not, then we will mark FALSE"
+						},
+						{
+							"name": "lookupPaymentReturns"
+						},
+						{
+							"name": "SelectPaymentReturns",
+							"description": "Renaming order_id to p_r_order_id to avoid confusion at the time of paymentreturns lookup"
+						},
+						{
+							"name": "FixPRNulls",
+							"description": "creating net_revenue column"
+						},
+						{
+							"name": "DeriveNetRevenueAndInvalidErrorMessage"
+						},
+						{
+							"name": "ValidInvalid",
+							"description": "This conditional split is used to split data into valid and invalid buckets based on the project requirements"
+						},
+						{
+							"name": "RenamingDuplicateColumn"
+						},
+						{
+							"name": "ValidColumns",
+							"description": "Keeping only columns that are useful to derive the business summary, since derived columns can be retained for invalid data"
+						},
+						{
+							"name": "AggStoreSummary"
+						}
+					],
+					"scriptLines": [
+						"parameters{",
+						"     pl_hwm as string ('1900-01-01 00:00:00.000')",
+						"}",
+						"source(output(",
+						"          order_id as string,",
+						"          customer_id as string,",
+						"          product_id as string,",
+						"          store_id as string,",
+						"          order_date as date,",
+						"          last_updated_date as string,",
+						"          quantity as short,",
+						"          selling_price as short,",
+						"          discount as short,",
+						"          order_status as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     inferDriftedColumnTypes: true,",
+						"     ignoreNoFilesFound: false,",
+						"     wildcardPaths:['orders*'],",
+						"     partitionBy('hash', 1)) ~> RawOrders",
+						"source(output(",
+						"          customer_id as string,",
+						"          customer_name as string,",
+						"          city as string,",
+						"          membership as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false) ~> RawCustomers",
+						"source(output(",
+						"          product_id as string,",
+						"          product_name as string,",
+						"          brand as string,",
+						"          category as string,",
+						"          store_id as string,",
+						"          mrp as double",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false) ~> RawProducts",
+						"source(output(",
+						"          order_id as string,",
+						"          payment_method as string,",
+						"          payment_status as string,",
+						"          return_status as string,",
+						"          refund_amount as short",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     wildcardPaths:['payments_returns*']) ~> RawPaymentReturns",
+						"DerivedColumns filter(last_updated_date > toTimestamp($pl_hwm, 'yyyy-MM-dd HH:mm:ss'),",
+						"     partitionBy('hash', 1)) ~> FilterHWM",
+						"RawOrders derive(last_updated_date = toTimestamp(trim(last_updated_date), 'yyyy-MM-dd HH:mm'),",
+						"          gross_amount = quantity*selling_price,",
+						"          discounted_amount = toDouble((quantity*selling_price)-discount),",
+						"          gst_amount = round(((quantity*selling_price)-discount)*0.18,2),",
+						"          final_amount = (quantity*selling_price)-discount +  (((quantity*selling_price)-discount)*0.18),",
+						"     partitionBy('hash', 1)) ~> DerivedColumns",
+						"FilterHWM aggregate(groupBy(last_updated_date),",
+						"     new_hwm = max(last_updated_date)) ~> NewHWM",
+						"FilterHWM window(over(order_id),",
+						"     desc(last_updated_date, true),",
+						"     rank_duplicate = rowNumber()) ~> WindowDuplicateRecords",
+						"RawCustomers derive(customer_name = trim(customer_name),",
+						"          city = iif(or(isNull(city),city==''), 'UNKNOWN', trim(city))) ~> CustomersCleanup",
+						"CustomersCleanup aggregate(groupBy(customer_id),",
+						"     customer_name = first(customer_name),",
+						"          city = first(city),",
+						"          membership = first(membership)) ~> RemoveDuplicates",
+						"WindowDuplicateRecords, Select lookup(customer_id == master_customer_id,",
+						"     multiple: false,",
+						"     pickup: 'any',",
+						"     broadcast: 'auto')~> lookupCustomers",
+						"RemoveDuplicates select(mapColumn(",
+						"          master_customer_id = customer_id,",
+						"          customer_name,",
+						"          city,",
+						"          membership",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> Select",
+						"lookupCustomers derive(invalid_customer = iif(or(isNull(master_customer_id),master_customer_id==''),'True', 'False'),",
+						"          invalid_quantity = iif(quantity<0, 'True', 'False'),",
+						"          invalid_selling_price = iif(selling_price<0, 'True', 'False')) ~> DeriveCustomerExists",
+						"DeriveCustomerExists, SelectProduct lookup(product_id == master_product_id,",
+						"     multiple: false,",
+						"     pickup: 'any',",
+						"     broadcast: 'auto')~> lookupProducts",
+						"RawProducts select(mapColumn(",
+						"          master_product_id = product_id,",
+						"          product_name,",
+						"          brand,",
+						"          category,",
+						"          store_id,",
+						"          mrp",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> SelectProduct",
+						"lookupProducts derive(invalid_product_id = iif(or(isNull(master_product_id),trim(master_product_id)==''), 'True', 'False')) ~> DeriveProductsExists",
+						"DeriveProductsExists, SelectPaymentReturns lookup(order_id == p_r_order_id,",
+						"     multiple: false,",
+						"     pickup: 'any',",
+						"     broadcast: 'auto')~> lookupPaymentReturns",
+						"RawPaymentReturns select(mapColumn(",
+						"          p_r_order_id = order_id,",
+						"          payment_method,",
+						"          payment_status,",
+						"          return_status,",
+						"          refund_amount",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> SelectPaymentReturns",
+						"lookupPaymentReturns derive(refund_amount = iifNull(refund_amount, toDecimal(0, 10, 2)),",
+						"          payment_method = iifNull(payment_method, 'UNKNOWN'),",
+						"          payment_status = iifNull(payment_status, 'UNKNOWN'),",
+						"          return_status = iifNull(return_status, 'UNKNOWN')) ~> FixPRNulls",
+						"FixPRNulls derive(net_revenue = iif(",
+						"    or(",
+						"        equals(order_status, 'Delivered'),",
+						"        equals(order_status, 'Returned')",
+						"    ),",
+						"    round(final_amount - refund_amount, 2),",
+						"    iif(",
+						"        equals(order_status, 'Cancelled'),",
+						"        toDouble(0),",
+						"        toDouble(0)",
+						"    )",
+						"),",
+						"          Status = case(",
+						"    invalid_quantity == 'True', 'INVALID QUANTITY (LESS THAN 0)',",
+						"    invalid_selling_price == 'True', 'INVALID SELLING PRICE (LESS THAN 0)',",
+						"    invalid_customer == 'True', 'CUSTOMER DOESNT EXIST',",
+						"    invalid_product_id == 'True', 'INVALID PRODUCT ID (PRODUCT DOESNT EXIST)',",
+						"    rank_duplicate >1 , 'DUPLICATED ORDER', ",
+						"    'VALID'",
+						")) ~> DeriveNetRevenueAndInvalidErrorMessage",
+						"RenamingDuplicateColumn split(and(",
+						"    and(",
+						"    and(invalid_customer== 'False', invalid_product_id == 'False'), ",
+						"    and(invalid_selling_price == 'False', invalid_quantity == 'False')",
+						"    ),",
+						"    rank_duplicate ==1",
+						"    ),",
+						"     disjoint: true) ~> ValidInvalid@(valid, invalid)",
+						"DeriveNetRevenueAndInvalidErrorMessage select(mapColumn(",
+						"          order_id,",
+						"          customer_id,",
+						"          product_id,",
+						"          store_id = RawOrders@store_id,",
+						"          order_date,",
+						"          last_updated_date,",
+						"          quantity,",
+						"          selling_price,",
+						"          discount,",
+						"          order_status,",
+						"          gross_amount,",
+						"          discounted_amount,",
+						"          gst_amount,",
+						"          final_amount,",
+						"          rank_duplicate,",
+						"          master_customer_id,",
+						"          customer_name,",
+						"          city,",
+						"          membership,",
+						"          invalid_customer,",
+						"          invalid_quantity,",
+						"          invalid_selling_price,",
+						"          master_product_id,",
+						"          product_name,",
+						"          brand,",
+						"          category,",
+						"          master_store_id = SelectProduct@store_id,",
+						"          mrp,",
+						"          invalid_product_id,",
+						"          p_r_order_id,",
+						"          payment_method,",
+						"          payment_status,",
+						"          return_status,",
+						"          refund_amount,",
+						"          net_revenue",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> RenamingDuplicateColumn",
+						"ValidInvalid@valid select(mapColumn(",
+						"          order_id,",
+						"          customer_id,",
+						"          product_id,",
+						"          store_id,",
+						"          order_date,",
+						"          last_updated_date,",
+						"          quantity,",
+						"          selling_price,",
+						"          discount,",
+						"          order_status,",
+						"          gross_amount,",
+						"          discounted_amount,",
+						"          gst_amount,",
+						"          final_amount,",
+						"          rank_duplicate,",
+						"          customer_name,",
+						"          city,",
+						"          membership,",
+						"          product_name,",
+						"          brand,",
+						"          category,",
+						"          mrp,",
+						"          payment_method,",
+						"          payment_status,",
+						"          return_status,",
+						"          refund_amount,",
+						"          net_revenue",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> ValidColumns",
+						"ValidColumns aggregate(groupBy(store_id,",
+						"          product_id,",
+						"          product_name),",
+						"     total_orders = count(),",
+						"          total_quantity = sum(quantity),",
+						"          net_revenue = round(sum(net_revenue),2),",
+						"          total_sales = round(sum(final_amount)),",
+						"          total_refund = round(sum(refund_amount))) ~> AggStoreSummary",
+						"ValidColumns sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     outputAssertFailedRows: true,",
+						"     assertFailure_fileSystem: 'curated',",
+						"     assertFailure_folderPath: 'Failure_rows') ~> CuratedOrdersSink",
+						"ValidInvalid@invalid sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> InvalidOrdersSink",
+						"AggStoreSummary sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> SummarySink"
+					]
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/ds_df_orders')]",
+				"[concat(variables('factoryId'), '/datasets/ds_df_customers')]",
+				"[concat(variables('factoryId'), '/datasets/ds_df_products')]",
+				"[concat(variables('factoryId'), '/datasets/ds_df_payment_returns')]",
+				"[concat(variables('factoryId'), '/datasets/ds_df_adls')]",
+				"[concat(variables('factoryId'), '/linkedServices/ls_adls')]"
+			]
+		}
+	]
+}
