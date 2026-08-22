@@ -642,7 +642,7 @@
 																},
 																"RowsWritten": {
 																	"value": {
-																		"value": "@activity('Copy customers data').output.dataCopied",
+																		"value": "@activity('Copy customers data').output.dataWritten",
 																		"type": "Expression"
 																	},
 																	"type": "Int64"
@@ -864,7 +864,7 @@
 																},
 																"RowsWritten": {
 																	"value": {
-																		"value": "@activity('Copy products data').output.rowsCopied",
+																		"value": "@activity('Copy products data').output.dataWritten",
 																		"type": "Expression"
 																	},
 																	"type": "Int64"
@@ -1079,14 +1079,14 @@
 																},
 																"RowsRead": {
 																	"value": {
-																		"value": "@activity('Copy orders data').output.rowsRead",
+																		"value": "@activity('Copy orders data').output.dataRead",
 																		"type": "Expression"
 																	},
 																	"type": "Int64"
 																},
 																"RowsWritten": {
 																	"value": {
-																		"value": "@activity('Copy orders data').output.rowsCopied",
+																		"value": "@activity('Copy orders data').output.dataWritten",
 																		"type": "Expression"
 																	},
 																	"type": "Int64"
@@ -1301,14 +1301,14 @@
 																},
 																"RowsRead": {
 																	"value": {
-																		"value": "@activity('Copy payments_returns  data').output.rowsRead",
+																		"value": "@activity('Copy payments_returns  data').output.dataRead",
 																		"type": "Expression"
 																	},
 																	"type": "Int64"
 																},
 																"RowsWritten": {
 																	"value": {
-																		"value": "@activity('Copy payments_returns  data').output.rowsCopied",
+																		"value": "@activity('Copy payments_returns  data').output.dataWritten",
 																		"type": "Expression"
 																	},
 																	"type": "Int64"
