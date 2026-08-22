@@ -57,7 +57,7 @@
 						"referenceName": "ds_df_adls",
 						"type": "DatasetReference"
 					},
-					"name": "SummarySink"
+					"name": "CuratedSummarySink"
 				}
 			],
 			"transformations": [
@@ -134,7 +134,8 @@
 			],
 			"scriptLines": [
 				"parameters{",
-				"     pl_hwm as string ('1900-01-01 00:00:00.000')",
+				"     pl_hwm as string ('1900-01-01 00:00:00.000'),",
+				"     pl_file_date as string ('1900-01-01 00:00:00.000')",
 				"}",
 				"source(output(",
 				"          order_id as string,",
@@ -359,6 +360,7 @@
 				"          total_refund = round(sum(refund_amount))) ~> AggStoreSummary",
 				"ValidColumns sink(allowSchemaDrift: true,",
 				"     validateSchema: false,",
+				"     partitionFileNames:[(concat('orders_', $pl_file_date,'.csv'))],",
 				"     umask: 0022,",
 				"     preCommands: [],",
 				"     postCommands: [],",
@@ -366,21 +368,26 @@
 				"     skipDuplicateMapOutputs: true,",
 				"     outputAssertFailedRows: true,",
 				"     assertFailure_fileSystem: 'curated',",
-				"     assertFailure_folderPath: 'Failure_rows') ~> CuratedOrdersSink",
+				"     assertFailure_folderPath: 'Failure_rows',",
+				"     partitionBy('hash', 1)) ~> CuratedOrdersSink",
 				"ValidInvalid@invalid sink(allowSchemaDrift: true,",
 				"     validateSchema: false,",
+				"     partitionFileNames:[(concat('rejected_orders_', $pl_file_date,'.csv'))],",
 				"     umask: 0022,",
 				"     preCommands: [],",
 				"     postCommands: [],",
 				"     skipDuplicateMapInputs: true,",
-				"     skipDuplicateMapOutputs: true) ~> InvalidOrdersSink",
+				"     skipDuplicateMapOutputs: true,",
+				"     partitionBy('hash', 1)) ~> InvalidOrdersSink",
 				"AggStoreSummary sink(allowSchemaDrift: true,",
 				"     validateSchema: false,",
+				"     partitionFileNames:[(concat('store_product_summary_', $pl_file_date,'.csv'))],",
 				"     umask: 0022,",
 				"     preCommands: [],",
 				"     postCommands: [],",
 				"     skipDuplicateMapInputs: true,",
-				"     skipDuplicateMapOutputs: true) ~> SummarySink"
+				"     skipDuplicateMapOutputs: true,",
+				"     partitionBy('hash', 1)) ~> CuratedSummarySink"
 			]
 		}
 	}

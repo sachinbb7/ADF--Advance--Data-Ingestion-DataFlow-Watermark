@@ -38,7 +38,7 @@
 				}
 			},
 			{
-				"name": "Data flow1",
+				"name": "Data Flow",
 				"type": "ExecuteDataFlow",
 				"dependsOn": [
 					{
@@ -61,7 +61,11 @@
 						"referenceName": "DataFlowTransformations",
 						"type": "DataFlowReference",
 						"parameters": {
-							"pl_hwm": "'1900-01-01 00:00:00.000'"
+							"pl_hwm": "'1900-01-01 00:00:00.000'",
+							"pl_file_date": {
+								"value": "'@{formatDateTime(utcNow(),'yyyyMMdd')}'",
+								"type": "Expression"
+							}
 						},
 						"datasetParameters": {
 							"CuratedOrdersSink": {
@@ -80,7 +84,7 @@
 								},
 								"ds_container": "rejected"
 							},
-							"SummarySink": {
+							"CuratedSummarySink": {
 								"ds_folder": "store_product_summary",
 								"ds_file": {
 									"value": "@concat(\n    'store_product_summary_',\n    formatDateTime(utcNow(),'yyyyMMdd'),\n    '.csv'\n)",
@@ -91,10 +95,11 @@
 						}
 					},
 					"compute": {
-						"coreCount": 8,
+						"coreCount": 16,
 						"computeType": "General"
 					},
-					"traceLevel": "Fine"
+					"traceLevel": "Fine",
+					"runConcurrently": true
 				}
 			},
 			{
@@ -114,6 +119,11 @@
 				}
 			}
 		],
+		"parameters": {
+			"pl_file_date": {
+				"type": "string"
+			}
+		},
 		"annotations": [],
 		"lastPublishTime": "2026-08-19T14:55:27Z"
 	},
