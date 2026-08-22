@@ -1,5 +1,5 @@
 {
-	"name": "DataFlowTransformations",
+	"name": "DF_PROCESS_ORDERS",
 	"properties": {
 		"type": "MappingDataFlow",
 		"typeProperties": {
@@ -58,6 +58,9 @@
 						"type": "DatasetReference"
 					},
 					"name": "CuratedSummarySink"
+				},
+				{
+					"name": "HwmCache"
 				}
 			],
 			"transformations": [
@@ -387,7 +390,15 @@
 				"     postCommands: [],",
 				"     skipDuplicateMapInputs: true,",
 				"     skipDuplicateMapOutputs: true,",
-				"     partitionBy('hash', 1)) ~> CuratedSummarySink"
+				"     partitionBy('hash', 1)) ~> CuratedSummarySink",
+				"NewHWM sink(validateSchema: false,",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     keys:['new_hwm'],",
+				"     store: 'cache',",
+				"     format: 'inline',",
+				"     output: true,",
+				"     saveOrder: 1) ~> HwmCache"
 			]
 		}
 	}

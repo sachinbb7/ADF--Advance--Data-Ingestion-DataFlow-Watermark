@@ -38,7 +38,7 @@
 				}
 			},
 			{
-				"name": "Data Flow",
+				"name": "DF_PROCESS_ORDERS",
 				"type": "ExecuteDataFlow",
 				"dependsOn": [
 					{
@@ -58,7 +58,7 @@
 				"userProperties": [],
 				"typeProperties": {
 					"dataflow": {
-						"referenceName": "DataFlowTransformations",
+						"referenceName": "DF_PROCESS_ORDERS",
 						"type": "DataFlowReference",
 						"parameters": {
 							"pl_hwm": "'1900-01-01 00:00:00.000'",
@@ -116,6 +116,193 @@
 						"type": "PipelineReference"
 					},
 					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "Stored procedure to update HWM",
+				"type": "SqlServerStoredProcedure",
+				"state": "Inactive",
+				"onInactiveMarkAs": "Succeeded",
+				"dependsOn": [
+					{
+						"activity": "DF_PROCESS_ORDERS",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[usp_Update_Watermark]",
+					"storedProcedureParameters": {
+						"NewWatermarkValue": {
+							"value": "",
+							"type": "DateTime"
+						},
+						"PipelineRunId": {
+							"value": "",
+							"type": "String"
+						},
+						"SourceName": {
+							"value": "",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "ls_azuresql",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "DataFlow Success Logging",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "DF_PROCESS_ORDERS",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[usp_Insert_Success_Log]",
+					"storedProcedureParameters": {
+						"ActivityName": {
+							"value": "DF_PROCESS_ORDERS",
+							"type": "String"
+						},
+						"FileName": {
+							"value": {
+								"value": "@concat(\n    'orders batch date: ',\n    pipeline().parameters.pl_file_date\n)",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"PipelineName": {
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"PipelineRunId": {
+							"value": {
+								"value": "@pipeline().RunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"RowsRead": {
+							"value": {
+								"value": "@activity('DF_PROCESS_ORDERS').output.rowsRead",
+								"type": "Expression"
+							},
+							"type": "Int64"
+						},
+						"RowsWritten": {
+							"value": {
+								"value": "@activity('DF_PROCESS_ORDERS').output.rowsCopied",
+								"type": "Expression"
+							},
+							"type": "Int64"
+						},
+						"SourceName": {
+							"value": "orders",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "ls_azuresql",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "DataFlow Failure Logging",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "DF_PROCESS_ORDERS",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[usp_Insert_Failure_Log]",
+					"storedProcedureParameters": {
+						"ActivityName": {
+							"value": "DF_PROCESS_ORDERS",
+							"type": "String"
+						},
+						"ErrorCode": {
+							"value": {
+								"value": "@activity('DF_PROCESS_ORDERS').output.error.errorCode",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"ErrorMessage": {
+							"value": {
+								"value": "@activity('DF_PROCESS_ORDERS').output.error.message",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"FileName": {
+							"value": {
+								"value": "@concat(\n    'orders batch date: ',\n    pipeline().parameters.pl_file_date\n)",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"PipelineName": {
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"PipelineRunId": {
+							"value": {
+								"value": "@pipeline().RunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"SourceName": {
+							"value": "orders",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "ls_azuresql",
+					"type": "LinkedServiceReference"
 				}
 			}
 		],

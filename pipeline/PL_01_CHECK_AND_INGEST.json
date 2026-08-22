@@ -40,6 +40,23 @@
 					},
 					"waitOnCompletion": true
 				}
+			},
+			{
+				"name": "Data Ingestion Failure",
+				"type": "Fail",
+				"dependsOn": [
+					{
+						"activity": "exec_ingestion",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"message": "Data Ingestion Failed - Check pl_data_ingestion",
+					"errorCode": "Pipeline Failed"
+				}
 			}
 		],
 		"annotations": [],
