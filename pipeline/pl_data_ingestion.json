@@ -919,6 +919,18 @@
 											}
 										]
 									}
+								],
+								"defaultActivities": [
+									{
+										"name": "Ingestion Failed",
+										"type": "Fail",
+										"dependsOn": [],
+										"userProperties": [],
+										"typeProperties": {
+											"message": "Ingestion Failed - SWITCH",
+											"errorCode": "Switch hit \"Default\""
+										}
+									}
 								]
 							}
 						}
