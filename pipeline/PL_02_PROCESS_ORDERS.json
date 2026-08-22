@@ -98,7 +98,7 @@
 						"coreCount": 16,
 						"computeType": "General"
 					},
-					"traceLevel": "Fine",
+					"traceLevel": "Coarse",
 					"runConcurrently": true
 				}
 			},
@@ -121,8 +121,6 @@
 			{
 				"name": "Stored procedure to update HWM",
 				"type": "SqlServerStoredProcedure",
-				"state": "Inactive",
-				"onInactiveMarkAs": "Succeeded",
 				"dependsOn": [
 					{
 						"activity": "DF_PROCESS_ORDERS",
@@ -143,15 +141,21 @@
 					"storedProcedureName": "[dbo].[usp_Update_Watermark]",
 					"storedProcedureParameters": {
 						"NewWatermarkValue": {
-							"value": "",
+							"value": {
+								"value": "@activity('DF_PROCESS_ORDERS').output.runStatus.output.HwmCache.value[0].new_hwm",
+								"type": "Expression"
+							},
 							"type": "DateTime"
 						},
 						"PipelineRunId": {
-							"value": "",
+							"value": {
+								"value": "@pipeline().RunId",
+								"type": "Expression"
+							},
 							"type": "String"
 						},
 						"SourceName": {
-							"value": "",
+							"value": "DF_PROCESS_ORDERS",
 							"type": "String"
 						}
 					}
