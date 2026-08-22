@@ -18,14 +18,7 @@
 		"typeProperties": {
 			"location": {
 				"type": "AzureBlobFSLocation",
-				"fileName": {
-					"value": "@dataset().ds_file_name",
-					"type": "Expression"
-				},
-				"folderPath": {
-					"value": "@dataset().ds_folder_name",
-					"type": "Expression"
-				},
+				"folderPath": "orders",
 				"fileSystem": "raw"
 			},
 			"columnDelimiter": ",",
