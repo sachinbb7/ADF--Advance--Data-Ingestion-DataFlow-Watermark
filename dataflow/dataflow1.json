@@ -39,7 +39,25 @@
 						"referenceName": "ds_df_adls",
 						"type": "DatasetReference"
 					},
-					"name": "CuratedOrdersSink"
+					"name": "CuratedOrdersSink",
+					"rejectedDataLinkedService": {
+						"referenceName": "ls_adls",
+						"type": "LinkedServiceReference"
+					}
+				},
+				{
+					"dataset": {
+						"referenceName": "ds_df_adls",
+						"type": "DatasetReference"
+					},
+					"name": "InvalidOrdersSink"
+				},
+				{
+					"dataset": {
+						"referenceName": "ds_df_adls",
+						"type": "DatasetReference"
+					},
+					"name": "SummarySink"
 				}
 			],
 			"transformations": [
@@ -116,9 +134,7 @@
 			],
 			"scriptLines": [
 				"parameters{",
-				"     pl_hwm as string ('1900-01-01 00:00:00.000'),",
-				"     p_folder_path as string,",
-				"     p_file_name as string",
+				"     pl_hwm as string ('1900-01-01 00:00:00.000')",
 				"}",
 				"source(allowSchemaDrift: true,",
 				"     validateSchema: false,",
@@ -335,7 +351,24 @@
 				"     preCommands: [],",
 				"     postCommands: [],",
 				"     skipDuplicateMapInputs: true,",
-				"     skipDuplicateMapOutputs: true) ~> CuratedOrdersSink"
+				"     skipDuplicateMapOutputs: true,",
+				"     outputAssertFailedRows: true,",
+				"     assertFailure_fileSystem: 'curated',",
+				"     assertFailure_folderPath: 'Failure_rows') ~> CuratedOrdersSink",
+				"ValidInvalid@invalid sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> InvalidOrdersSink",
+				"AggStoreSummary sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> SummarySink"
 			]
 		}
 	}
