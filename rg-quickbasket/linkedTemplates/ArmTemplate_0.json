@@ -531,7 +531,7 @@
 			]
 		},
 		{
-			"name": "[concat(parameters('factoryName'), '/pl_data_ingestion')]",
+			"name": "[concat(parameters('factoryName'), '/PL_DATA_INGESTION')]",
 			"type": "Microsoft.DataFactory/factories/pipelines",
 			"apiVersion": "2018-06-01",
 			"properties": {
@@ -1508,7 +1508,7 @@
 			]
 		},
 		{
-			"name": "[concat(parameters('factoryName'), '/pl_until')]",
+			"name": "[concat(parameters('factoryName'), '/PL_UNTIL')]",
 			"type": "Microsoft.DataFactory/factories/pipelines",
 			"apiVersion": "2018-06-01",
 			"properties": {
@@ -2140,7 +2140,6 @@
 						"NewHWM sink(validateSchema: false,",
 						"     skipDuplicateMapInputs: true,",
 						"     skipDuplicateMapOutputs: true,",
-						"     keys:['new_hwm'],",
 						"     store: 'cache',",
 						"     format: 'inline',",
 						"     output: true,",
@@ -2173,7 +2172,7 @@
 						"userProperties": [],
 						"typeProperties": {
 							"pipeline": {
-								"referenceName": "pl_until",
+								"referenceName": "PL_UNTIL",
 								"type": "PipelineReference"
 							},
 							"waitOnCompletion": true,
@@ -2197,7 +2196,7 @@
 						"userProperties": [],
 						"typeProperties": {
 							"pipeline": {
-								"referenceName": "pl_data_ingestion",
+								"referenceName": "PL_DATA_INGESTION",
 								"type": "PipelineReference"
 							},
 							"waitOnCompletion": true,
@@ -2229,8 +2228,8 @@
 				"lastPublishTime": "2026-08-18T14:51:00Z"
 			},
 			"dependsOn": [
-				"[concat(variables('factoryId'), '/pipelines/pl_until')]",
-				"[concat(variables('factoryId'), '/pipelines/pl_data_ingestion')]"
+				"[concat(variables('factoryId'), '/pipelines/PL_UNTIL')]",
+				"[concat(variables('factoryId'), '/pipelines/PL_DATA_INGESTION')]"
 			]
 		},
 		{
@@ -2240,52 +2239,9 @@
 			"properties": {
 				"activities": [
 					{
-						"name": "Lookup HWM",
-						"type": "Lookup",
-						"dependsOn": [
-							{
-								"activity": "Execute untill and ingestion",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"policy": {
-							"timeout": "0.12:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"source": {
-								"type": "AzureSqlSource",
-								"sqlReaderQuery": {
-									"value": "SELECT\n    MAX(last_processed_timestamp) AS previous_hwm\nFROM dbo.etl_watermark\nWHERE source_name = 'orders';",
-									"type": "Expression"
-								},
-								"queryTimeout": "02:00:00",
-								"partitionOption": "None"
-							},
-							"dataset": {
-								"referenceName": "ds_azuresql",
-								"type": "DatasetReference",
-								"parameters": {}
-							}
-						}
-					},
-					{
 						"name": "DF_PROCESS_ORDERS",
 						"type": "ExecuteDataFlow",
-						"dependsOn": [
-							{
-								"activity": "Lookup HWM",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
+						"dependsOn": [],
 						"policy": {
 							"timeout": "0.12:00:00",
 							"retry": 0,
@@ -2348,6 +2304,64 @@
 								"firstRowOnly": true
 							}
 						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"parameters": {
+					"pl_file_date": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"lastPublishTime": "2026-08-19T14:55:27Z"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/dataflows/DF_PROCESS_ORDERS')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/PL_MASTER_QUICKBASKET')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Lookup HWM",
+						"type": "Lookup",
+						"dependsOn": [
+							{
+								"activity": "Execute untill and ingestion",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "AzureSqlSource",
+								"sqlReaderQuery": {
+									"value": "SELECT\n    MAX(last_processed_timestamp) AS previous_hwm\nFROM dbo.etl_watermark\nWHERE source_name = 'orders';",
+									"type": "Expression"
+								},
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "ds_azuresql",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						}
 					},
 					{
 						"name": "Execute untill and ingestion",
@@ -2390,17 +2404,10 @@
 							"storedProcedureParameters": {
 								"NewWatermarkValue": {
 									"value": {
-										"value": "@activity('DF_PROCESS_ORDERS').output.runStatus.output.HwmCache.value[0].new_hwm",
+										"value": "@formatDateTime(\n    addSeconds(\n        '1970-01-01T00:00:00Z',\n        div(\n            activity('DF_PROCESS_ORDERS').output.runStatus.output.HwmCache.value[0].new_hwm,\n            1000\n        )\n    ),\n    'yyyy-MM-dd HH:mm:ss.fff'\n)",
 										"type": "Expression"
 									},
 									"type": "DateTime"
-								},
-								"PipelineRunId": {
-									"value": {
-										"value": "@pipeline().RunId",
-										"type": "Expression"
-									},
-									"type": "String"
 								},
 								"SourceName": {
 									"value": "DF_PROCESS_ORDERS",
@@ -2461,17 +2468,11 @@
 									"type": "String"
 								},
 								"RowsRead": {
-									"value": {
-										"value": "@activity('DF_PROCESS_ORDERS').output.dataRead",
-										"type": "Expression"
-									},
+									"value": null,
 									"type": "Int64"
 								},
 								"RowsWritten": {
-									"value": {
-										"value": "@activity('DF_PROCESS_ORDERS').output.dataWritten",
-										"type": "Expression"
-									},
+									"value": null,
 									"type": "Int64"
 								},
 								"SourceName": {
@@ -2512,17 +2513,11 @@
 									"type": "String"
 								},
 								"ErrorCode": {
-									"value": {
-										"value": "@activity('DF_PROCESS_ORDERS').output.errors[0].Code",
-										"type": "Expression"
-									},
+									"value": null,
 									"type": "String"
 								},
 								"ErrorMessage": {
-									"value": {
-										"value": "@activity('DF_PROCESS_ORDERS').output.errors[0].Message",
-										"type": "Expression"
-									},
+									"value": null,
 									"type": "String"
 								},
 								"FileName": {
@@ -2556,6 +2551,30 @@
 							"referenceName": "ls_azuresql",
 							"type": "LinkedServiceReference"
 						}
+					},
+					{
+						"name": "DF_PROCESS_ORDERS",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "Lookup HWM",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "PL_02_PROCESS_ORDERS",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
 					}
 				],
 				"policy": {
@@ -2571,9 +2590,9 @@
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/ds_azuresql')]",
-				"[concat(variables('factoryId'), '/dataflows/DF_PROCESS_ORDERS')]",
 				"[concat(variables('factoryId'), '/pipelines/PL_01_CHECK_AND_INGEST')]",
-				"[concat(variables('factoryId'), '/linkedServices/ls_azuresql')]"
+				"[concat(variables('factoryId'), '/linkedServices/ls_azuresql')]",
+				"[concat(variables('factoryId'), '/pipelines/PL_02_PROCESS_ORDERS')]"
 			]
 		}
 	]
