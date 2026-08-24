@@ -172,10 +172,7 @@
 											"value": "@concat(\n    'orders_',\n    formatDateTime(convertFromUtc(utcNow(),'India Standard Time'),'yyyyMMdd'),\n    '.csv'\n)\n",
 											"type": "Expression"
 										},
-										"ds_container": {
-											"value": "@pipeline().parameters.pl_container",
-											"type": "Expression"
-										}
+										"ds_container": "raw"
 									},
 									"RawCustomers": {
 										"ds_folder": "customers",
@@ -531,13 +528,13 @@
 																"referenceName": "ds_df_adls",
 																"type": "DatasetReference",
 																"parameters": {
-																	"ds_folder": "raw",
+																	"ds_folder": "customers",
 																	"ds_file": {
 																		"value": "@item()",
 																		"type": "Expression"
 																	},
 																	"ds_container": {
-																		"value": "customers",
+																		"value": "raw",
 																		"type": "Expression"
 																	}
 																}
@@ -757,15 +754,12 @@
 																"referenceName": "ds_df_adls",
 																"type": "DatasetReference",
 																"parameters": {
-																	"ds_folder": "raw",
+																	"ds_folder": "products",
 																	"ds_file": {
 																		"value": "@item()",
 																		"type": "Expression"
 																	},
-																	"ds_container": {
-																		"value": "products",
-																		"type": "Expression"
-																	}
+																	"ds_container": "raw"
 																}
 															}
 														]
@@ -983,15 +977,12 @@
 																"referenceName": "ds_df_adls",
 																"type": "DatasetReference",
 																"parameters": {
-																	"ds_folder": "raw",
+																	"ds_folder": "orders",
 																	"ds_file": {
 																		"value": "@item()",
 																		"type": "Expression"
 																	},
-																	"ds_container": {
-																		"value": "orders",
-																		"type": "Expression"
-																	}
+																	"ds_container": "raw"
 																}
 															}
 														]
@@ -1209,15 +1200,12 @@
 																"referenceName": "ds_df_adls",
 																"type": "DatasetReference",
 																"parameters": {
-																	"ds_folder": "raw",
+																	"ds_folder": "payments_returns",
 																	"ds_file": {
 																		"value": "@item()",
 																		"type": "Expression"
 																	},
-																	"ds_container": {
-																		"value": "payments_returns",
-																		"type": "Expression"
-																	}
+																	"ds_container": "raw"
 																}
 															}
 														]
@@ -1329,7 +1317,7 @@
 																},
 																"ErrorMessage": {
 																	"value": {
-																		"value": "@activity('Copy payments_returns  data').output.error[0].Message",
+																		"value": "@activity('Copy payments_returns  data').output.errors[0].Message",
 																		"type": "Expression"
 																	},
 																	"type": "String"
@@ -1752,49 +1740,6 @@
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/ds_blob')]"
-			]
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/ds_adls')]",
-			"type": "Microsoft.DataFactory/factories/datasets",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"linkedServiceName": {
-					"referenceName": "ls_adls",
-					"type": "LinkedServiceReference"
-				},
-				"parameters": {
-					"ds_folder_name": {
-						"type": "string"
-					},
-					"ds_file_name": {
-						"type": "string"
-					}
-				},
-				"annotations": [],
-				"type": "DelimitedText",
-				"typeProperties": {
-					"location": {
-						"type": "AzureBlobFSLocation",
-						"fileName": {
-							"value": "@dataset().ds_file_name",
-							"type": "Expression"
-						},
-						"folderPath": {
-							"value": "@dataset().ds_folder_name",
-							"type": "Expression"
-						},
-						"fileSystem": "raw"
-					},
-					"columnDelimiter": ",",
-					"escapeChar": "\\",
-					"firstRowAsHeader": true,
-					"quoteChar": "\""
-				},
-				"schema": []
-			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/linkedServices/ls_adls')]"
 			]
 		},
 		{
