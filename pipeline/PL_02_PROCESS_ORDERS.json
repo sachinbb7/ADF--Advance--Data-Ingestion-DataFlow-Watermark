@@ -236,11 +236,6 @@
 				}
 			}
 		],
-		"parameters": {
-			"pl_file_date": {
-				"type": "string"
-			}
-		},
 		"annotations": [],
 		"lastPublishTime": "2026-08-19T14:55:27Z"
 	},
