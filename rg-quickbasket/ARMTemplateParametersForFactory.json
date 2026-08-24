@@ -5,9 +5,6 @@
 		"factoryName": {
 			"value": "rg-quickbasket"
 		},
-		"ds_azuresql_password": {
-			"value": ""
-		},
 		"ls_adls_accountKey": {
 			"value": ""
 		},
@@ -16,15 +13,6 @@
 		},
 		"ls_blob_connectionString": {
 			"value": ""
-		},
-		"ds_azuresql_properties_typeProperties_server": {
-			"value": "serverquickbasket.database.windows.net"
-		},
-		"ds_azuresql_properties_typeProperties_database": {
-			"value": "dbqucikbasket"
-		},
-		"ds_azuresql_properties_typeProperties_userName": {
-			"value": "sbb"
 		},
 		"ls_adls_properties_typeProperties_url": {
 			"value": "https://saadlsquickbasket.dfs.core.windows.net/"
