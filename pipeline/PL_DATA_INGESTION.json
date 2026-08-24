@@ -99,9 +99,12 @@
 														"type": "DatasetReference",
 														"parameters": {
 															"ds_folder": "raw",
-															"ds_file": "customers",
-															"ds_container": {
+															"ds_file": {
 																"value": "@item()",
+																"type": "Expression"
+															},
+															"ds_container": {
+																"value": "customers",
 																"type": "Expression"
 															}
 														}
@@ -322,9 +325,12 @@
 														"type": "DatasetReference",
 														"parameters": {
 															"ds_folder": "raw",
-															"ds_file": "products",
-															"ds_container": {
+															"ds_file": {
 																"value": "@item()",
+																"type": "Expression"
+															},
+															"ds_container": {
+																"value": "products",
 																"type": "Expression"
 															}
 														}
@@ -545,9 +551,12 @@
 														"type": "DatasetReference",
 														"parameters": {
 															"ds_folder": "raw",
-															"ds_file": "orders",
-															"ds_container": {
+															"ds_file": {
 																"value": "@item()",
+																"type": "Expression"
+															},
+															"ds_container": {
+																"value": "orders",
 																"type": "Expression"
 															}
 														}
@@ -768,9 +777,12 @@
 														"type": "DatasetReference",
 														"parameters": {
 															"ds_folder": "raw",
-															"ds_file": "payments_returns",
-															"ds_container": {
+															"ds_file": {
 																"value": "@item()",
+																"type": "Expression"
+															},
+															"ds_container": {
+																"value": "payments_returns",
 																"type": "Expression"
 															}
 														}
