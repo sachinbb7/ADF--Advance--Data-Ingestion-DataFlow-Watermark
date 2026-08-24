@@ -12,7 +12,7 @@
 				"userProperties": [],
 				"typeProperties": {
 					"pipeline": {
-						"referenceName": "pl_until",
+						"referenceName": "PL_UNTIL",
 						"type": "PipelineReference"
 					},
 					"waitOnCompletion": true
@@ -35,7 +35,7 @@
 				"userProperties": [],
 				"typeProperties": {
 					"pipeline": {
-						"referenceName": "pl_data_ingestion",
+						"referenceName": "PL_DATA_INGESTION",
 						"type": "PipelineReference"
 					},
 					"waitOnCompletion": true
