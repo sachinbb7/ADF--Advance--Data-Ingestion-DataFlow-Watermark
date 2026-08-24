@@ -133,6 +133,10 @@
 				},
 				{
 					"name": "AggStoreSummary"
+				},
+				{
+					"name": "DeriveHWMGroup",
+					"description": "Derived this palceholder to input this into group by in AGG "
 				}
 			],
 			"scriptLines": [
@@ -197,7 +201,7 @@
 				"          gst_amount = round(((quantity*selling_price)-discount)*0.18,2),",
 				"          final_amount = (quantity*selling_price)-discount +  (((quantity*selling_price)-discount)*0.18),",
 				"     partitionBy('hash', 1)) ~> DerivedColumns",
-				"FilterHWM aggregate(groupBy(last_updated_date),",
+				"DeriveHWMGroup aggregate(groupBy(hwm_group),",
 				"     new_hwm = max(last_updated_date)) ~> NewHWM",
 				"FilterHWM window(over(order_id),",
 				"     desc(last_updated_date, true),",
@@ -361,6 +365,7 @@
 				"          net_revenue = round(sum(net_revenue),2),",
 				"          total_sales = round(sum(final_amount)),",
 				"          total_refund = round(sum(refund_amount))) ~> AggStoreSummary",
+				"FilterHWM derive(hwm_group = 1) ~> DeriveHWMGroup",
 				"ValidColumns sink(allowSchemaDrift: true,",
 				"     validateSchema: false,",
 				"     partitionFileNames:[(concat('orders_', $pl_file_date,'.csv'))],",
