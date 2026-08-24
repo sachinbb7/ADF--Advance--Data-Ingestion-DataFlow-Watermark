@@ -38,6 +38,9 @@
 		"ls_azuresql_properties_typeProperties_userName": {
 			"value": "sbb"
 		},
+		"Trigger_10AM_properties_PL_MASTER_QUICKBASKET_parameters_pl_file_date": {
+			"value": "'1990-01-01 00:00:000'"
+		},
 		"containerUri": {
 			"value": ""
 		},

@@ -51,6 +51,10 @@
 			"type": "string",
 			"defaultValue": "sbb"
 		},
+		"Trigger_10AM_properties_PL_MASTER_QUICKBASKET_parameters_pl_file_date": {
+			"type": "string",
+			"defaultValue": "'1990-01-01 00:00:000'"
+		},
 		"containerUri": {
 			"type": "string",
 			"metadata": "URI to storage account containing linked ARM templates"
@@ -110,6 +114,9 @@
 					},
 					"ls_azuresql_properties_typeProperties_userName": {
 						"value": "[parameters('ls_azuresql_properties_typeProperties_userName')]"
+					},
+					"Trigger_10AM_properties_PL_MASTER_QUICKBASKET_parameters_pl_file_date": {
+						"value": "[parameters('Trigger_10AM_properties_PL_MASTER_QUICKBASKET_parameters_pl_file_date')]"
 					}
 				}
 			},

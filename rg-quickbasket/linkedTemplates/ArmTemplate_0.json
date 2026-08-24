@@ -50,6 +50,10 @@
 		"ls_azuresql_properties_typeProperties_userName": {
 			"type": "string",
 			"defaultValue": "sbb"
+		},
+		"Trigger_10AM_properties_PL_MASTER_QUICKBASKET_parameters_pl_file_date": {
+			"type": "string",
+			"defaultValue": "'1990-01-01 00:00:000'"
 		}
 	},
 	"variables": {
@@ -266,66 +270,6 @@
 			]
 		},
 		{
-			"name": "[concat(parameters('factoryName'), '/ds_blob_storage')]",
-			"type": "Microsoft.DataFactory/factories/datasets",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"linkedServiceName": {
-					"referenceName": "ls_blob",
-					"type": "LinkedServiceReference"
-				},
-				"parameters": {
-					"ds_folder_name": {
-						"type": "string"
-					},
-					"ds_file_name": {
-						"type": "string"
-					}
-				},
-				"annotations": [],
-				"type": "DelimitedText",
-				"typeProperties": {
-					"location": {
-						"type": "AzureBlobStorageLocation",
-						"fileName": {
-							"value": "@dataset().ds_file_name",
-							"type": "Expression"
-						},
-						"folderPath": {
-							"value": "@dataset().ds_folder_name",
-							"type": "Expression"
-						},
-						"container": "input"
-					},
-					"columnDelimiter": ",",
-					"escapeChar": "\\",
-					"firstRowAsHeader": true,
-					"quoteChar": "\""
-				},
-				"schema": [
-					{
-						"name": "customer_id",
-						"type": "String"
-					},
-					{
-						"name": "customer_name",
-						"type": "String"
-					},
-					{
-						"name": "city",
-						"type": "String"
-					},
-					{
-						"name": "membership",
-						"type": "String"
-					}
-				]
-			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/linkedServices/ls_blob')]"
-			]
-		},
-		{
 			"name": "[concat(parameters('factoryName'), '/ds_df_adls')]",
 			"type": "Microsoft.DataFactory/factories/datasets",
 			"apiVersion": "2018-06-01",
@@ -369,162 +313,6 @@
 					"quoteChar": "\""
 				},
 				"schema": []
-			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/linkedServices/ls_adls')]"
-			]
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/ds_df_customers')]",
-			"type": "Microsoft.DataFactory/factories/datasets",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"linkedServiceName": {
-					"referenceName": "ls_adls",
-					"type": "LinkedServiceReference"
-				},
-				"annotations": [],
-				"type": "DelimitedText",
-				"typeProperties": {
-					"location": {
-						"type": "AzureBlobFSLocation",
-						"fileName": "customers.csv",
-						"folderPath": "customers",
-						"fileSystem": "raw"
-					},
-					"columnDelimiter": ",",
-					"escapeChar": "\\",
-					"firstRowAsHeader": true,
-					"quoteChar": "\""
-				},
-				"schema": [
-					{
-						"name": "customer_id",
-						"type": "String"
-					},
-					{
-						"name": "customer_name",
-						"type": "String"
-					},
-					{
-						"name": "city",
-						"type": "String"
-					},
-					{
-						"name": "membership",
-						"type": "String"
-					}
-				]
-			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/linkedServices/ls_adls')]"
-			]
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/ds_df_orders')]",
-			"type": "Microsoft.DataFactory/factories/datasets",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"linkedServiceName": {
-					"referenceName": "ls_adls",
-					"type": "LinkedServiceReference"
-				},
-				"annotations": [],
-				"type": "DelimitedText",
-				"typeProperties": {
-					"location": {
-						"type": "AzureBlobFSLocation",
-						"folderPath": "orders",
-						"fileSystem": "raw"
-					},
-					"columnDelimiter": ",",
-					"escapeChar": "\\",
-					"firstRowAsHeader": true,
-					"quoteChar": ""
-				},
-				"schema": []
-			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/linkedServices/ls_adls')]"
-			]
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/ds_df_payment_returns')]",
-			"type": "Microsoft.DataFactory/factories/datasets",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"linkedServiceName": {
-					"referenceName": "ls_adls",
-					"type": "LinkedServiceReference"
-				},
-				"annotations": [],
-				"type": "DelimitedText",
-				"typeProperties": {
-					"location": {
-						"type": "AzureBlobFSLocation",
-						"folderPath": "payments_returns",
-						"fileSystem": "raw"
-					},
-					"columnDelimiter": ",",
-					"escapeChar": "\\",
-					"firstRowAsHeader": true,
-					"quoteChar": "\""
-				},
-				"schema": []
-			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/linkedServices/ls_adls')]"
-			]
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/ds_df_products')]",
-			"type": "Microsoft.DataFactory/factories/datasets",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"linkedServiceName": {
-					"referenceName": "ls_adls",
-					"type": "LinkedServiceReference"
-				},
-				"annotations": [],
-				"type": "DelimitedText",
-				"typeProperties": {
-					"location": {
-						"type": "AzureBlobFSLocation",
-						"fileName": "products.csv",
-						"folderPath": "products",
-						"fileSystem": "raw"
-					},
-					"columnDelimiter": ",",
-					"escapeChar": "\\",
-					"firstRowAsHeader": true,
-					"quoteChar": "\""
-				},
-				"schema": [
-					{
-						"name": "product_id",
-						"type": "String"
-					},
-					{
-						"name": "product_name",
-						"type": "String"
-					},
-					{
-						"name": "brand",
-						"type": "String"
-					},
-					{
-						"name": "category",
-						"type": "String"
-					},
-					{
-						"name": "store_id",
-						"type": "String"
-					},
-					{
-						"name": "mrp",
-						"type": "String"
-					}
-				]
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/linkedServices/ls_adls')]"
@@ -616,7 +404,7 @@
 														},
 														"inputs": [
 															{
-																"referenceName": "ds_blob_storage",
+																"referenceName": "ds_blob",
 																"type": "DatasetReference",
 																"parameters": {
 																	"ds_folder_name": "customers",
@@ -629,12 +417,13 @@
 														],
 														"outputs": [
 															{
-																"referenceName": "ds_adls",
+																"referenceName": "ds_df_adls",
 																"type": "DatasetReference",
 																"parameters": {
-																	"ds_folder_name": "customers",
-																	"ds_file_name": {
-																		"value": "@item()\n",
+																	"ds_folder": "raw",
+																	"ds_file": "customers",
+																	"ds_container": {
+																		"value": "@item()",
 																		"type": "Expression"
 																	}
 																}
@@ -851,12 +640,13 @@
 														],
 														"outputs": [
 															{
-																"referenceName": "ds_adls",
+																"referenceName": "ds_df_adls",
 																"type": "DatasetReference",
 																"parameters": {
-																	"ds_folder_name": "products",
-																	"ds_file_name": {
-																		"value": "@item()\n",
+																	"ds_folder": "raw",
+																	"ds_file": "products",
+																	"ds_container": {
+																		"value": "@item()",
 																		"type": "Expression"
 																	}
 																}
@@ -1073,12 +863,13 @@
 														],
 														"outputs": [
 															{
-																"referenceName": "ds_adls",
+																"referenceName": "ds_df_adls",
 																"type": "DatasetReference",
 																"parameters": {
-																	"ds_folder_name": "orders",
-																	"ds_file_name": {
-																		"value": "@item()\n",
+																	"ds_folder": "raw",
+																	"ds_file": "orders",
+																	"ds_container": {
+																		"value": "@item()",
 																		"type": "Expression"
 																	}
 																}
@@ -1295,12 +1086,13 @@
 														],
 														"outputs": [
 															{
-																"referenceName": "ds_adls",
+																"referenceName": "ds_df_adls",
 																"type": "DatasetReference",
 																"parameters": {
-																	"ds_folder_name": "payments_returns",
-																	"ds_file_name": {
-																		"value": "@item()\n",
+																	"ds_folder": "raw",
+																	"ds_file": "payments_returns",
+																	"ds_container": {
+																		"value": "@item()",
 																		"type": "Expression"
 																	}
 																}
@@ -1501,10 +1293,9 @@
 				"lastPublishTime": "2026-08-18T14:51:00Z"
 			},
 			"dependsOn": [
-				"[concat(variables('factoryId'), '/datasets/ds_blob_storage')]",
-				"[concat(variables('factoryId'), '/datasets/ds_adls')]",
-				"[concat(variables('factoryId'), '/linkedServices/ls_azuresql')]",
-				"[concat(variables('factoryId'), '/datasets/ds_blob')]"
+				"[concat(variables('factoryId'), '/datasets/ds_blob')]",
+				"[concat(variables('factoryId'), '/datasets/ds_df_adls')]",
+				"[concat(variables('factoryId'), '/linkedServices/ls_azuresql')]"
 			]
 		},
 		{
@@ -1749,28 +1540,28 @@
 					"sources": [
 						{
 							"dataset": {
-								"referenceName": "ds_df_orders",
+								"referenceName": "ds_df_adls",
 								"type": "DatasetReference"
 							},
 							"name": "RawOrders"
 						},
 						{
 							"dataset": {
-								"referenceName": "ds_df_customers",
+								"referenceName": "ds_df_adls",
 								"type": "DatasetReference"
 							},
 							"name": "RawCustomers"
 						},
 						{
 							"dataset": {
-								"referenceName": "ds_df_products",
+								"referenceName": "ds_df_adls",
 								"type": "DatasetReference"
 							},
 							"name": "RawProducts"
 						},
 						{
 							"dataset": {
-								"referenceName": "ds_df_payment_returns",
+								"referenceName": "ds_df_adls",
 								"type": "DatasetReference"
 							},
 							"name": "RawPaymentReturns"
@@ -1876,6 +1667,10 @@
 						},
 						{
 							"name": "AggStoreSummary"
+						},
+						{
+							"name": "DeriveHWMGroup",
+							"description": "Derived this palceholder to input this into group by in AGG "
 						}
 					],
 					"scriptLines": [
@@ -1909,6 +1704,7 @@
 						"     ),",
 						"     allowSchemaDrift: true,",
 						"     validateSchema: false,",
+						"     inferDriftedColumnTypes: true,",
 						"     ignoreNoFilesFound: false) ~> RawCustomers",
 						"source(output(",
 						"          product_id as string,",
@@ -1916,10 +1712,11 @@
 						"          brand as string,",
 						"          category as string,",
 						"          store_id as string,",
-						"          mrp as double",
+						"          mrp as short",
 						"     ),",
 						"     allowSchemaDrift: true,",
 						"     validateSchema: false,",
+						"     inferDriftedColumnTypes: true,",
 						"     ignoreNoFilesFound: false) ~> RawProducts",
 						"source(output(",
 						"          order_id as string,",
@@ -1930,6 +1727,7 @@
 						"     ),",
 						"     allowSchemaDrift: true,",
 						"     validateSchema: false,",
+						"     inferDriftedColumnTypes: true,",
 						"     ignoreNoFilesFound: false,",
 						"     wildcardPaths:['payments_returns*']) ~> RawPaymentReturns",
 						"DerivedColumns filter(last_updated_date > toTimestamp($pl_hwm, 'yyyy-MM-dd HH:mm:ss'),",
@@ -1940,7 +1738,7 @@
 						"          gst_amount = round(((quantity*selling_price)-discount)*0.18,2),",
 						"          final_amount = (quantity*selling_price)-discount +  (((quantity*selling_price)-discount)*0.18),",
 						"     partitionBy('hash', 1)) ~> DerivedColumns",
-						"FilterHWM aggregate(groupBy(last_updated_date),",
+						"DeriveHWMGroup aggregate(groupBy(hwm_group),",
 						"     new_hwm = max(last_updated_date)) ~> NewHWM",
 						"FilterHWM window(over(order_id),",
 						"     desc(last_updated_date, true),",
@@ -2053,7 +1851,7 @@
 						"          product_name,",
 						"          brand,",
 						"          category,",
-						"          master_store_id = SelectProduct@store_id,",
+						"          master_store_id = RawOrders@store_id,",
 						"          mrp,",
 						"          invalid_product_id,",
 						"          p_r_order_id,",
@@ -2104,6 +1902,7 @@
 						"          net_revenue = round(sum(net_revenue),2),",
 						"          total_sales = round(sum(final_amount)),",
 						"          total_refund = round(sum(refund_amount))) ~> AggStoreSummary",
+						"FilterHWM derive(hwm_group = 1) ~> DeriveHWMGroup",
 						"ValidColumns sink(allowSchemaDrift: true,",
 						"     validateSchema: false,",
 						"     partitionFileNames:[(concat('orders_', $pl_file_date,'.csv'))],",
@@ -2148,10 +1947,6 @@
 				}
 			},
 			"dependsOn": [
-				"[concat(variables('factoryId'), '/datasets/ds_df_orders')]",
-				"[concat(variables('factoryId'), '/datasets/ds_df_customers')]",
-				"[concat(variables('factoryId'), '/datasets/ds_df_products')]",
-				"[concat(variables('factoryId'), '/datasets/ds_df_payment_returns')]",
 				"[concat(variables('factoryId'), '/datasets/ds_df_adls')]",
 				"[concat(variables('factoryId'), '/linkedServices/ls_adls')]"
 			]
@@ -2262,14 +2057,39 @@
 									}
 								},
 								"datasetParameters": {
-									"RawOrders": {},
-									"RawCustomers": {},
-									"RawProducts": {},
-									"RawPaymentReturns": {},
+									"RawOrders": {
+										"ds_folder": "orders",
+										"ds_file": {
+											"value": "@concat(\n    'orders_',\n    formatDateTime(convertFromUtc(utcNow(),'India Standard Time'),'yyyyMMdd'),\n    '.csv'\n)\n",
+											"type": "Expression"
+										},
+										"ds_container": {
+											"value": "@pipeline().parameters.pl_container",
+											"type": "Expression"
+										}
+									},
+									"RawCustomers": {
+										"ds_folder": "customers",
+										"ds_file": "customers.csv",
+										"ds_container": "raw"
+									},
+									"RawProducts": {
+										"ds_folder": "products",
+										"ds_file": "products.csv",
+										"ds_container": "raw"
+									},
+									"RawPaymentReturns": {
+										"ds_folder": "payments_returns",
+										"ds_file": {
+											"value": "@concat(\n    'payments_returns',\n    formatDateTime(convertFromUtc(utcNow(),'India Standard Time'),'yyyyMMdd'),\n    '.csv'\n)",
+											"type": "Expression"
+										},
+										"ds_container": "raw"
+									},
 									"CuratedOrdersSink": {
 										"ds_folder": "orders",
 										"ds_file": {
-											"value": "@concat(\n    'orders_',\n    formatDateTime(utcNow(),'yyyyMMdd'),\n    '.csv'\n)",
+											"value": "@concat(\n    'orders_',\n    formatDateTime(convertFromUtc(utcNow(),'India Standard Time'),'yyyyMMdd'), 'csv'\n)",
 											"type": "Expression"
 										},
 										"ds_container": "curated"
@@ -2277,7 +2097,7 @@
 									"InvalidOrdersSink": {
 										"ds_folder": "orders",
 										"ds_file": {
-											"value": "@concat(\n    'rejected_orders_',\n    formatDateTime(utcNow(),'yyyyMMdd'),\n    '.csv'\n)",
+											"value": "@concat(\n    'rejected_orders_',\n    formatDateTime(convertFromUtc(utcNow(),'India Standard Time'),'yyyyMMdd'),\n    '.csv'\n)\n",
 											"type": "Expression"
 										},
 										"ds_container": "rejected"
@@ -2285,7 +2105,7 @@
 									"CuratedSummarySink": {
 										"ds_folder": "store_product_summary",
 										"ds_file": {
-											"value": "@concat(\n    'store_product_summary_',\n    formatDateTime(utcNow(),'yyyyMMdd'),\n    '.csv'\n)",
+											"value": "@concat(\n    'store_product_summary_',\n    formatDateTime(convertFromUtc(utcNow(),'India Standard Time'),'yyyyMMdd'),\n    '.csv'\n)\n",
 											"type": "Expression"
 										},
 										"ds_container": "curated"
@@ -2303,81 +2123,6 @@
 							"cacheSinks": {
 								"firstRowOnly": true
 							}
-						}
-					}
-				],
-				"policy": {
-					"elapsedTimeMetric": {}
-				},
-				"parameters": {
-					"pl_file_date": {
-						"type": "string"
-					}
-				},
-				"annotations": [],
-				"lastPublishTime": "2026-08-19T14:55:27Z"
-			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/dataflows/DF_PROCESS_ORDERS')]"
-			]
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/PL_MASTER_QUICKBASKET')]",
-			"type": "Microsoft.DataFactory/factories/pipelines",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"activities": [
-					{
-						"name": "Lookup HWM",
-						"type": "Lookup",
-						"dependsOn": [
-							{
-								"activity": "Execute untill and ingestion",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"policy": {
-							"timeout": "0.12:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"source": {
-								"type": "AzureSqlSource",
-								"sqlReaderQuery": {
-									"value": "SELECT\n    MAX(last_processed_timestamp) AS previous_hwm\nFROM dbo.etl_watermark\nWHERE source_name = 'orders';",
-									"type": "Expression"
-								},
-								"queryTimeout": "02:00:00",
-								"partitionOption": "None"
-							},
-							"dataset": {
-								"referenceName": "ds_azuresql",
-								"type": "DatasetReference",
-								"parameters": {}
-							}
-						}
-					},
-					{
-						"name": "Execute untill and ingestion",
-						"type": "ExecutePipeline",
-						"dependsOn": [],
-						"policy": {
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"pipeline": {
-								"referenceName": "PL_01_CHECK_AND_INGEST",
-								"type": "PipelineReference"
-							},
-							"waitOnCompletion": true,
-							"parameters": {}
 						}
 					},
 					{
@@ -2410,7 +2155,7 @@
 									"type": "DateTime"
 								},
 								"SourceName": {
-									"value": "DF_PROCESS_ORDERS",
+									"value": "orders",
 									"type": "String"
 								}
 							}
@@ -2551,6 +2296,88 @@
 							"referenceName": "ls_azuresql",
 							"type": "LinkedServiceReference"
 						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"parameters": {
+					"pl_file_date": {
+						"type": "string"
+					},
+					"pl_container": {
+						"type": "string"
+					},
+					"pl_folder": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"lastPublishTime": "2026-08-19T14:55:27Z"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/dataflows/DF_PROCESS_ORDERS')]",
+				"[concat(variables('factoryId'), '/linkedServices/ls_azuresql')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/PL_MASTER_QUICKBASKET')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Lookup HWM",
+						"type": "Lookup",
+						"dependsOn": [
+							{
+								"activity": "Execute untill and ingestion",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "AzureSqlSource",
+								"sqlReaderQuery": {
+									"value": "SELECT\n    MAX(last_processed_timestamp) AS previous_hwm\nFROM dbo.etl_watermark\nWHERE source_name = 'orders';",
+									"type": "Expression"
+								},
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "ds_azuresql",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						}
+					},
+					{
+						"name": "Execute untill and ingestion",
+						"type": "ExecutePipeline",
+						"dependsOn": [],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "PL_01_CHECK_AND_INGEST",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
 					},
 					{
 						"name": "DF_PROCESS_ORDERS",
@@ -2591,7 +2418,46 @@
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/ds_azuresql')]",
 				"[concat(variables('factoryId'), '/pipelines/PL_01_CHECK_AND_INGEST')]",
-				"[concat(variables('factoryId'), '/linkedServices/ls_azuresql')]",
+				"[concat(variables('factoryId'), '/pipelines/PL_02_PROCESS_ORDERS')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/Trigger_10AM')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"runtimeState": "Started",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "PL_MASTER_QUICKBASKET",
+							"type": "PipelineReference"
+						},
+						"parameters": {
+							"pl_file_date": "[parameters('Trigger_10AM_properties_PL_MASTER_QUICKBASKET_parameters_pl_file_date')]"
+						}
+					},
+					{
+						"pipelineReference": {
+							"referenceName": "PL_02_PROCESS_ORDERS",
+							"type": "PipelineReference"
+						},
+						"parameters": {}
+					}
+				],
+				"type": "ScheduleTrigger",
+				"typeProperties": {
+					"recurrence": {
+						"frequency": "Day",
+						"interval": 1,
+						"startTime": "2026-08-24T11:51:00",
+						"timeZone": "India Standard Time"
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/pipelines/PL_MASTER_QUICKBASKET')]",
 				"[concat(variables('factoryId'), '/pipelines/PL_02_PROCESS_ORDERS')]"
 			]
 		}
