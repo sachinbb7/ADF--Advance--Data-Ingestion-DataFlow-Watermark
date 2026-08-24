@@ -98,13 +98,13 @@
 														"referenceName": "ds_df_adls",
 														"type": "DatasetReference",
 														"parameters": {
-															"ds_folder": "raw",
+															"ds_folder": "customers",
 															"ds_file": {
 																"value": "@item()",
 																"type": "Expression"
 															},
 															"ds_container": {
-																"value": "customers",
+																"value": "raw",
 																"type": "Expression"
 															}
 														}
@@ -324,15 +324,12 @@
 														"referenceName": "ds_df_adls",
 														"type": "DatasetReference",
 														"parameters": {
-															"ds_folder": "raw",
+															"ds_folder": "products",
 															"ds_file": {
 																"value": "@item()",
 																"type": "Expression"
 															},
-															"ds_container": {
-																"value": "products",
-																"type": "Expression"
-															}
+															"ds_container": "raw"
 														}
 													}
 												]
@@ -550,15 +547,12 @@
 														"referenceName": "ds_df_adls",
 														"type": "DatasetReference",
 														"parameters": {
-															"ds_folder": "raw",
+															"ds_folder": "orders",
 															"ds_file": {
 																"value": "@item()",
 																"type": "Expression"
 															},
-															"ds_container": {
-																"value": "orders",
-																"type": "Expression"
-															}
+															"ds_container": "raw"
 														}
 													}
 												]
@@ -776,15 +770,12 @@
 														"referenceName": "ds_df_adls",
 														"type": "DatasetReference",
 														"parameters": {
-															"ds_folder": "raw",
+															"ds_folder": "payments_returns",
 															"ds_file": {
 																"value": "@item()",
 																"type": "Expression"
 															},
-															"ds_container": {
-																"value": "payments_returns",
-																"type": "Expression"
-															}
+															"ds_container": "raw"
 														}
 													}
 												]
@@ -896,7 +887,7 @@
 														},
 														"ErrorMessage": {
 															"value": {
-																"value": "@activity('Copy payments_returns  data').output.error[0].Message",
+																"value": "@activity('Copy payments_returns  data').output.errors[0].Message",
 																"type": "Expression"
 															},
 															"type": "String"

@@ -32,10 +32,7 @@
 									"value": "@concat(\n    'orders_',\n    formatDateTime(convertFromUtc(utcNow(),'India Standard Time'),'yyyyMMdd'),\n    '.csv'\n)\n",
 									"type": "Expression"
 								},
-								"ds_container": {
-									"value": "@pipeline().parameters.pl_container",
-									"type": "Expression"
-								}
+								"ds_container": "raw"
 							},
 							"RawCustomers": {
 								"ds_folder": "customers",
