@@ -6,28 +6,28 @@
 			"sources": [
 				{
 					"dataset": {
-						"referenceName": "ds_df_orders",
+						"referenceName": "ds_df_adls",
 						"type": "DatasetReference"
 					},
 					"name": "RawOrders"
 				},
 				{
 					"dataset": {
-						"referenceName": "ds_df_customers",
+						"referenceName": "ds_df_adls",
 						"type": "DatasetReference"
 					},
 					"name": "RawCustomers"
 				},
 				{
 					"dataset": {
-						"referenceName": "ds_df_products",
+						"referenceName": "ds_df_adls",
 						"type": "DatasetReference"
 					},
 					"name": "RawProducts"
 				},
 				{
 					"dataset": {
-						"referenceName": "ds_df_payment_returns",
+						"referenceName": "ds_df_adls",
 						"type": "DatasetReference"
 					},
 					"name": "RawPaymentReturns"
@@ -170,6 +170,7 @@
 				"     ),",
 				"     allowSchemaDrift: true,",
 				"     validateSchema: false,",
+				"     inferDriftedColumnTypes: true,",
 				"     ignoreNoFilesFound: false) ~> RawCustomers",
 				"source(output(",
 				"          product_id as string,",
@@ -177,10 +178,11 @@
 				"          brand as string,",
 				"          category as string,",
 				"          store_id as string,",
-				"          mrp as double",
+				"          mrp as short",
 				"     ),",
 				"     allowSchemaDrift: true,",
 				"     validateSchema: false,",
+				"     inferDriftedColumnTypes: true,",
 				"     ignoreNoFilesFound: false) ~> RawProducts",
 				"source(output(",
 				"          order_id as string,",
@@ -191,6 +193,7 @@
 				"     ),",
 				"     allowSchemaDrift: true,",
 				"     validateSchema: false,",
+				"     inferDriftedColumnTypes: true,",
 				"     ignoreNoFilesFound: false,",
 				"     wildcardPaths:['payments_returns*']) ~> RawPaymentReturns",
 				"DerivedColumns filter(last_updated_date > toTimestamp($pl_hwm, 'yyyy-MM-dd HH:mm:ss'),",
@@ -314,7 +317,7 @@
 				"          product_name,",
 				"          brand,",
 				"          category,",
-				"          master_store_id = SelectProduct@store_id,",
+				"          master_store_id = RawOrders@store_id,",
 				"          mrp,",
 				"          invalid_product_id,",
 				"          p_r_order_id,",

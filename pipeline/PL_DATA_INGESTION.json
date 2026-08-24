@@ -82,7 +82,7 @@
 												},
 												"inputs": [
 													{
-														"referenceName": "ds_blob_storage",
+														"referenceName": "ds_blob",
 														"type": "DatasetReference",
 														"parameters": {
 															"ds_folder_name": "customers",
@@ -95,12 +95,13 @@
 												],
 												"outputs": [
 													{
-														"referenceName": "ds_adls",
+														"referenceName": "ds_df_adls",
 														"type": "DatasetReference",
 														"parameters": {
-															"ds_folder_name": "customers",
-															"ds_file_name": {
-																"value": "@item()\n",
+															"ds_folder": "raw",
+															"ds_file": "customers",
+															"ds_container": {
+																"value": "@item()",
 																"type": "Expression"
 															}
 														}
@@ -317,12 +318,13 @@
 												],
 												"outputs": [
 													{
-														"referenceName": "ds_adls",
+														"referenceName": "ds_df_adls",
 														"type": "DatasetReference",
 														"parameters": {
-															"ds_folder_name": "products",
-															"ds_file_name": {
-																"value": "@item()\n",
+															"ds_folder": "raw",
+															"ds_file": "products",
+															"ds_container": {
+																"value": "@item()",
 																"type": "Expression"
 															}
 														}
@@ -539,12 +541,13 @@
 												],
 												"outputs": [
 													{
-														"referenceName": "ds_adls",
+														"referenceName": "ds_df_adls",
 														"type": "DatasetReference",
 														"parameters": {
-															"ds_folder_name": "orders",
-															"ds_file_name": {
-																"value": "@item()\n",
+															"ds_folder": "raw",
+															"ds_file": "orders",
+															"ds_container": {
+																"value": "@item()",
 																"type": "Expression"
 															}
 														}
@@ -761,12 +764,13 @@
 												],
 												"outputs": [
 													{
-														"referenceName": "ds_adls",
+														"referenceName": "ds_df_adls",
 														"type": "DatasetReference",
 														"parameters": {
-															"ds_folder_name": "payments_returns",
-															"ds_file_name": {
-																"value": "@item()\n",
+															"ds_folder": "raw",
+															"ds_file": "payments_returns",
+															"ds_container": {
+																"value": "@item()",
 																"type": "Expression"
 															}
 														}

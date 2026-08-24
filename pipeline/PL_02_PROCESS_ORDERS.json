@@ -26,10 +26,39 @@
 							}
 						},
 						"datasetParameters": {
+							"RawOrders": {
+								"ds_folder": "orders",
+								"ds_file": {
+									"value": "@concat(\n    'orders_',\n    formatDateTime(convertFromUtc(utcNow(),'India Standard Time'),'yyyyMMdd'),\n    '.csv'\n)\n",
+									"type": "Expression"
+								},
+								"ds_container": {
+									"value": "@pipeline().parameters.pl_container",
+									"type": "Expression"
+								}
+							},
+							"RawCustomers": {
+								"ds_folder": "customers",
+								"ds_file": "customers.csv",
+								"ds_container": "raw"
+							},
+							"RawProducts": {
+								"ds_folder": "products",
+								"ds_file": "products.csv",
+								"ds_container": "raw"
+							},
+							"RawPaymentReturns": {
+								"ds_folder": "payments_returns",
+								"ds_file": {
+									"value": "@concat(\n    'payments_returns',\n    formatDateTime(convertFromUtc(utcNow(),'India Standard Time'),'yyyyMMdd'),\n    '.csv'\n)",
+									"type": "Expression"
+								},
+								"ds_container": "raw"
+							},
 							"CuratedOrdersSink": {
 								"ds_folder": "orders",
 								"ds_file": {
-									"value": "@concat(\n    'orders_',\n    formatDateTime(utcNow(),'yyyyMMdd'),\n    '.csv'\n)",
+									"value": "@concat(\n    'orders_',\n    formatDateTime(convertFromUtc(utcNow(),'India Standard Time'),'yyyyMMdd'), 'csv'\n)",
 									"type": "Expression"
 								},
 								"ds_container": "curated"
@@ -37,7 +66,7 @@
 							"InvalidOrdersSink": {
 								"ds_folder": "orders",
 								"ds_file": {
-									"value": "@concat(\n    'rejected_orders_',\n    formatDateTime(utcNow(),'yyyyMMdd'),\n    '.csv'\n)",
+									"value": "@concat(\n    'rejected_orders_',\n    formatDateTime(convertFromUtc(utcNow(),'India Standard Time'),'yyyyMMdd'),\n    '.csv'\n)\n",
 									"type": "Expression"
 								},
 								"ds_container": "rejected"
@@ -45,7 +74,7 @@
 							"CuratedSummarySink": {
 								"ds_folder": "store_product_summary",
 								"ds_file": {
-									"value": "@concat(\n    'store_product_summary_',\n    formatDateTime(utcNow(),'yyyyMMdd'),\n    '.csv'\n)",
+									"value": "@concat(\n    'store_product_summary_',\n    formatDateTime(convertFromUtc(utcNow(),'India Standard Time'),'yyyyMMdd'),\n    '.csv'\n)\n",
 									"type": "Expression"
 								},
 								"ds_container": "curated"
@@ -236,6 +265,17 @@
 				}
 			}
 		],
+		"parameters": {
+			"pl_file_date": {
+				"type": "string"
+			},
+			"pl_container": {
+				"type": "string"
+			},
+			"pl_folder": {
+				"type": "string"
+			}
+		},
 		"annotations": [],
 		"lastPublishTime": "2026-08-19T14:55:27Z"
 	},
