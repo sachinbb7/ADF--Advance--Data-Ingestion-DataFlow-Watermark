@@ -155,6 +155,13 @@
 							"value": "DF_PROCESS_ORDERS",
 							"type": "String"
 						},
+						"DataFactoryName": {
+							"value": {
+								"value": "@pipeline().DataFactory",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
 						"FileName": {
 							"value": {
 								"value": "@concat(\n    'orders batch date: ',\n    pipeline().parameters.pl_file_date\n)",
@@ -186,6 +193,13 @@
 						},
 						"SourceName": {
 							"value": "orders",
+							"type": "String"
+						},
+						"TriggerId": {
+							"value": {
+								"value": "@pipeline().TriggerId",
+								"type": "Expression"
+							},
 							"type": "String"
 						}
 					}
