@@ -137,6 +137,10 @@
 				{
 					"name": "DeriveHWMGroup",
 					"description": "Derived this palceholder to input this into group by in AGG "
+				},
+				{
+					"name": "DeriveErrorMessage",
+					"description": "Creating Error message column to indicate the reason for rejection"
 				}
 			],
 			"scriptLines": [
@@ -368,6 +372,13 @@
 				"          total_sales = round(sum(final_amount),2),",
 				"          total_refund = round(sum(refund_amount),2)) ~> AggStoreSummary",
 				"FilterHWM derive(hwm_group = 1) ~> DeriveHWMGroup",
+				"ValidInvalid@invalid derive(Error_Message = concat(",
+				"    iif(invalid_customer=='True', 'invalid customer; ', ''),",
+				"    iif(invalid_quantity=='True', 'invalid quantity; ', ''),",
+				"    iif(invalid_selling_price=='True', 'invalid selling price; ', ''),",
+				"    iif(invalid_product_id=='True', 'invalid product id; ', ''),",
+				"    iif(rank_duplicate >=2, 'duplicate record; ', 'no error')",
+				")) ~> DeriveErrorMessage",
 				"ValidColumns sink(allowSchemaDrift: true,",
 				"     validateSchema: false,",
 				"     partitionFileNames:[(concat('orders_', $pl_file_date,'.csv'))],",
@@ -381,7 +392,7 @@
 				"     assertFailure_fileSystem: 'curated',",
 				"     assertFailure_folderPath: 'Failure_rows',",
 				"     partitionBy('hash', 1)) ~> CuratedOrdersSink",
-				"ValidInvalid@invalid sink(allowSchemaDrift: true,",
+				"DeriveErrorMessage sink(allowSchemaDrift: true,",
 				"     validateSchema: false,",
 				"     partitionFileNames:[(concat('rejected_orders_', $pl_file_date,'.csv'))],",
 				"     umask: 0022,",
