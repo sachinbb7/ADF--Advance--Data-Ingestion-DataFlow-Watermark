@@ -235,6 +235,13 @@
 							"value": "DF_PROCESS_ORDERS",
 							"type": "String"
 						},
+						"DataFactoryName": {
+							"value": {
+								"value": "@pipeline().DataFactory",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
 						"ErrorCode": {
 							"value": null,
 							"type": "String"
@@ -266,6 +273,13 @@
 						},
 						"SourceName": {
 							"value": "orders",
+							"type": "String"
+						},
+						"TriggerId": {
+							"value": {
+								"value": "@pipeline().TriggerId",
+								"type": "Expression"
+							},
 							"type": "String"
 						}
 					}
