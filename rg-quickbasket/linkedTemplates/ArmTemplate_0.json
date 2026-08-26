@@ -1425,7 +1425,7 @@
 									}
 								}
 							],
-							"timeout": "0.12:00:00"
+							"timeout": "0.00:15:00"
 						}
 					}
 				],
@@ -1655,10 +1655,10 @@
 						"DerivedColumns filter(last_updated_date > toTimestamp($pl_hwm, 'yyyy-MM-dd HH:mm:ss'),",
 						"     partitionBy('hash', 1)) ~> FilterHWM",
 						"RawOrders derive(last_updated_date = toTimestamp(trim(last_updated_date), 'yyyy-MM-dd HH:mm'),",
-						"          gross_amount = quantity*selling_price,",
-						"          discounted_amount = toDouble((quantity*selling_price)-discount),",
+						"          gross_amount = round(quantity*selling_price,2),",
+						"          discounted_amount = round((quantity*selling_price)-discount,2),",
 						"          gst_amount = round(((quantity*selling_price)-discount)*0.18,2),",
-						"          final_amount = (quantity*selling_price)-discount +  (((quantity*selling_price)-discount)*0.18),",
+						"          final_amount = round((quantity*selling_price)-discount +  (((quantity*selling_price)-discount)*0.18),2),",
 						"     partitionBy('hash', 1)) ~> DerivedColumns",
 						"DeriveHWMGroup aggregate(groupBy(hwm_group),",
 						"     new_hwm = max(last_updated_date)) ~> NewHWM",
@@ -1684,8 +1684,8 @@
 						"     skipDuplicateMapInputs: true,",
 						"     skipDuplicateMapOutputs: true) ~> Select",
 						"lookupCustomers derive(invalid_customer = iif(or(isNull(master_customer_id),master_customer_id==''),'True', 'False'),",
-						"          invalid_quantity = iif(quantity<0, 'True', 'False'),",
-						"          invalid_selling_price = iif(selling_price<0, 'True', 'False')) ~> DeriveCustomerExists",
+						"          invalid_quantity = iif(quantity>0, 'False', 'True'),",
+						"          invalid_selling_price = iif(selling_price>0, 'False', 'True')) ~> DeriveCustomerExists",
 						"DeriveCustomerExists, SelectProduct lookup(product_id == master_product_id,",
 						"     multiple: false,",
 						"     pickup: 'any',",
@@ -1740,12 +1740,12 @@
 						")) ~> DeriveNetRevenueAndInvalidErrorMessage",
 						"RenamingDuplicateColumn split(and(",
 						"    and(",
-						"    and(invalid_customer== 'False', invalid_product_id == 'False'), ",
-						"    and(invalid_selling_price == 'False', invalid_quantity == 'False')",
+						"    and(invalid_customer != 'True', invalid_product_id != 'True'), ",
+						"    and(invalid_selling_price != 'True', invalid_quantity != 'True')",
 						"    ),",
-						"    rank_duplicate ==1",
+						"    rank_duplicate == 1",
 						"    ),",
-						"     disjoint: true) ~> ValidInvalid@(valid, invalid)",
+						"     disjoint: false) ~> ValidInvalid@(valid, invalid)",
 						"DeriveNetRevenueAndInvalidErrorMessage select(mapColumn(",
 						"          order_id,",
 						"          customer_id,",
@@ -1800,7 +1800,6 @@
 						"          discounted_amount,",
 						"          gst_amount,",
 						"          final_amount,",
-						"          rank_duplicate,",
 						"          customer_name,",
 						"          city,",
 						"          membership,",
@@ -1822,8 +1821,8 @@
 						"     total_orders = count(),",
 						"          total_quantity = sum(quantity),",
 						"          net_revenue = round(sum(net_revenue),2),",
-						"          total_sales = round(sum(final_amount)),",
-						"          total_refund = round(sum(refund_amount))) ~> AggStoreSummary",
+						"          total_sales = round(sum(final_amount),2),",
+						"          total_refund = round(sum(refund_amount),2)) ~> AggStoreSummary",
 						"FilterHWM derive(hwm_group = 1) ~> DeriveHWMGroup",
 						"ValidColumns sink(allowSchemaDrift: true,",
 						"     validateSchema: false,",
@@ -2284,6 +2283,8 @@
 					{
 						"name": "Execute untill and ingestion",
 						"type": "ExecutePipeline",
+						"state": "Inactive",
+						"onInactiveMarkAs": "Succeeded",
 						"dependsOn": [],
 						"policy": {
 							"secureInput": false
