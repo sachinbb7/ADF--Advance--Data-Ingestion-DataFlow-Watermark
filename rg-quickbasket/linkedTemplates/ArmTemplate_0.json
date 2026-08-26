@@ -378,6 +378,13 @@
 																	"value": "Copy Customer Data",
 																	"type": "String"
 																},
+																"DataFactoryName": {
+																	"value": {
+																		"value": "@pipeline().DataFactory",
+																		"type": "Expression"
+																	},
+																	"type": "String"
+																},
 																"FileName": {
 																	"value": {
 																		"value": "@item()",
@@ -416,6 +423,13 @@
 																"SourceName": {
 																	"value": "raw/customers",
 																	"type": "String"
+																},
+																"TriggerId": {
+																	"value": {
+																		"value": "@pipeline().TriggerId",
+																		"type": "Expression"
+																	},
+																	"type": "String"
 																}
 															}
 														},
@@ -448,6 +462,13 @@
 															"storedProcedureParameters": {
 																"ActivityName": {
 																	"value": "Copy Customer Data",
+																	"type": "String"
+																},
+																"DataFactoryName": {
+																	"value": {
+																		"value": "@pipeline().DataFactory",
+																		"type": "Expression"
+																	},
 																	"type": "String"
 																},
 																"ErrorCode": {
@@ -487,6 +508,13 @@
 																},
 																"SourceName": {
 																	"value": "raw/customers",
+																	"type": "String"
+																},
+																"TriggerId": {
+																	"value": {
+																		"value": "@pipeline().TriggerId",
+																		"type": "Expression"
+																	},
 																	"type": "String"
 																}
 															}
@@ -598,7 +626,14 @@
 															"storedProcedureName": "[[dbo].[usp_Insert_Success_Log]",
 															"storedProcedureParameters": {
 																"ActivityName": {
-																	"value": "Copy Products Data",
+																	"value": "Copy Customer Data",
+																	"type": "String"
+																},
+																"DataFactoryName": {
+																	"value": {
+																		"value": "@pipeline().DataFactory",
+																		"type": "Expression"
+																	},
 																	"type": "String"
 																},
 																"FileName": {
@@ -639,6 +674,13 @@
 																"SourceName": {
 																	"value": "raw/products",
 																	"type": "String"
+																},
+																"TriggerId": {
+																	"value": {
+																		"value": "@pipeline().TriggerId",
+																		"type": "Expression"
+																	},
+																	"type": "String"
 																}
 															}
 														},
@@ -670,7 +712,14 @@
 															"storedProcedureName": "[[dbo].[usp_Insert_Failure_Log]",
 															"storedProcedureParameters": {
 																"ActivityName": {
-																	"value": "Copy Products Data",
+																	"value": "Copy Customer Data",
+																	"type": "String"
+																},
+																"DataFactoryName": {
+																	"value": {
+																		"value": "@pipeline().DataFactory",
+																		"type": "Expression"
+																	},
 																	"type": "String"
 																},
 																"ErrorCode": {
@@ -710,6 +759,13 @@
 																},
 																"SourceName": {
 																	"value": "raw/products",
+																	"type": "String"
+																},
+																"TriggerId": {
+																	"value": {
+																		"value": "@pipeline().TriggerId",
+																		"type": "Expression"
+																	},
 																	"type": "String"
 																}
 															}
@@ -799,78 +855,6 @@
 														]
 													},
 													{
-														"name": "Success Logging Orders",
-														"type": "SqlServerStoredProcedure",
-														"dependsOn": [
-															{
-																"activity": "Copy orders data",
-																"dependencyConditions": [
-																	"Succeeded"
-																]
-															}
-														],
-														"policy": {
-															"timeout": "0.12:00:00",
-															"retry": 0,
-															"retryIntervalInSeconds": 30,
-															"secureOutput": false,
-															"secureInput": false
-														},
-														"userProperties": [],
-														"typeProperties": {
-															"storedProcedureName": "[[dbo].[usp_Insert_Success_Log]",
-															"storedProcedureParameters": {
-																"ActivityName": {
-																	"value": "Copy Orders Data",
-																	"type": "String"
-																},
-																"FileName": {
-																	"value": {
-																		"value": "@item()",
-																		"type": "Expression"
-																	},
-																	"type": "String"
-																},
-																"PipelineName": {
-																	"value": {
-																		"value": "@pipeline().Pipeline",
-																		"type": "Expression"
-																	},
-																	"type": "String"
-																},
-																"PipelineRunId": {
-																	"value": {
-																		"value": "@pipeline().RunId",
-																		"type": "Expression"
-																	},
-																	"type": "String"
-																},
-																"RowsRead": {
-																	"value": {
-																		"value": "@activity('Copy orders data').output.dataRead",
-																		"type": "Expression"
-																	},
-																	"type": "Int64"
-																},
-																"RowsWritten": {
-																	"value": {
-																		"value": "@activity('Copy orders data').output.dataWritten",
-																		"type": "Expression"
-																	},
-																	"type": "Int64"
-																},
-																"SourceName": {
-																	"value": "raw/orders",
-																	"type": "String"
-																}
-															}
-														},
-														"linkedServiceName": {
-															"referenceName": "ls_azuresql",
-															"type": "LinkedServiceReference"
-														}
-													},
-													{
 														"name": "Failure Logging Orders",
 														"type": "SqlServerStoredProcedure",
 														"dependsOn": [
@@ -933,6 +917,92 @@
 																},
 																"SourceName": {
 																	"value": "raw/orders",
+																	"type": "String"
+																}
+															}
+														},
+														"linkedServiceName": {
+															"referenceName": "ls_azuresql",
+															"type": "LinkedServiceReference"
+														}
+													},
+													{
+														"name": "Success Logging Orders",
+														"type": "SqlServerStoredProcedure",
+														"dependsOn": [
+															{
+																"activity": "Copy orders data",
+																"dependencyConditions": [
+																	"Succeeded"
+																]
+															}
+														],
+														"policy": {
+															"timeout": "0.12:00:00",
+															"retry": 0,
+															"retryIntervalInSeconds": 30,
+															"secureOutput": false,
+															"secureInput": false
+														},
+														"userProperties": [],
+														"typeProperties": {
+															"storedProcedureName": "[[dbo].[usp_Insert_Success_Log]",
+															"storedProcedureParameters": {
+																"ActivityName": {
+																	"value": "Copy Customer Data",
+																	"type": "String"
+																},
+																"DataFactoryName": {
+																	"value": {
+																		"value": "@pipeline().DataFactory",
+																		"type": "Expression"
+																	},
+																	"type": "String"
+																},
+																"FileName": {
+																	"value": {
+																		"value": "@item()",
+																		"type": "Expression"
+																	},
+																	"type": "String"
+																},
+																"PipelineName": {
+																	"value": {
+																		"value": "@pipeline().Pipeline",
+																		"type": "Expression"
+																	},
+																	"type": "String"
+																},
+																"PipelineRunId": {
+																	"value": {
+																		"value": "@pipeline().RunId",
+																		"type": "Expression"
+																	},
+																	"type": "String"
+																},
+																"RowsRead": {
+																	"value": {
+																		"value": "@activity('Copy orders data').output.dataRead",
+																		"type": "Expression"
+																	},
+																	"type": "Int64"
+																},
+																"RowsWritten": {
+																	"value": {
+																		"value": "@activity('Copy orders data').output.dataWritten",
+																		"type": "Expression"
+																	},
+																	"type": "Int64"
+																},
+																"SourceName": {
+																	"value": "raw/orders",
+																	"type": "String"
+																},
+																"TriggerId": {
+																	"value": {
+																		"value": "@pipeline().TriggerId",
+																		"type": "Expression"
+																	},
 																	"type": "String"
 																}
 															}
@@ -1022,7 +1092,7 @@
 														]
 													},
 													{
-														"name": "Success Logging Payment_returns",
+														"name": "Success Logging Payments_Returns",
 														"type": "SqlServerStoredProcedure",
 														"dependsOn": [
 															{
@@ -1044,7 +1114,14 @@
 															"storedProcedureName": "[[dbo].[usp_Insert_Success_Log]",
 															"storedProcedureParameters": {
 																"ActivityName": {
-																	"value": "Copy Payment Returns Data",
+																	"value": "Copy Customer Data",
+																	"type": "String"
+																},
+																"DataFactoryName": {
+																	"value": {
+																		"value": "@pipeline().DataFactory",
+																		"type": "Expression"
+																	},
 																	"type": "String"
 																},
 																"FileName": {
@@ -1070,20 +1147,27 @@
 																},
 																"RowsRead": {
 																	"value": {
-																		"value": "@activity('Copy payments_returns  data').output.dataRead",
+																		"value": "@activity('Copy payments_returns  data').output.output.dataRead",
 																		"type": "Expression"
 																	},
 																	"type": "Int64"
 																},
 																"RowsWritten": {
 																	"value": {
-																		"value": "@activity('Copy payments_returns  data').output.dataWritten",
+																		"value": "@activity('Copy payments_returns  data').output.output.dataWritten",
 																		"type": "Expression"
 																	},
 																	"type": "Int64"
 																},
 																"SourceName": {
 																	"value": "raw/payments_returns",
+																	"type": "String"
+																},
+																"TriggerId": {
+																	"value": {
+																		"value": "@pipeline().TriggerId",
+																		"type": "Expression"
+																	},
 																	"type": "String"
 																}
 															}
@@ -1116,19 +1200,26 @@
 															"storedProcedureName": "[[dbo].[usp_Insert_Failure_Log]",
 															"storedProcedureParameters": {
 																"ActivityName": {
-																	"value": "Copy Payments_Returns Data",
+																	"value": "Copy Customer Data",
+																	"type": "String"
+																},
+																"DataFactoryName": {
+																	"value": {
+																		"value": "@pipeline().DataFactory",
+																		"type": "Expression"
+																	},
 																	"type": "String"
 																},
 																"ErrorCode": {
 																	"value": {
-																		"value": "@activity('Copy payments_returns  data').output.errors[0].Code",
+																		"value": "@activity('Copy payments_returns  data').output.output.errors[0].Code",
 																		"type": "Expression"
 																	},
 																	"type": "String"
 																},
 																"ErrorMessage": {
 																	"value": {
-																		"value": "@activity('Copy payments_returns  data').output.errors[0].Message",
+																		"value": "@activity('Copy payments_returns  data').output.output.errors[0].Message",
 																		"type": "Expression"
 																	},
 																	"type": "String"
@@ -1156,6 +1247,13 @@
 																},
 																"SourceName": {
 																	"value": "raw/payments_returns",
+																	"type": "String"
+																},
+																"TriggerId": {
+																	"value": {
+																		"value": "@pipeline().TriggerId",
+																		"type": "Expression"
+																	},
 																	"type": "String"
 																}
 															}
