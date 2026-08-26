@@ -2468,7 +2468,7 @@
 						"    iif(invalid_quantity=='True', 'invalid quantity; ', ''),",
 						"    iif(invalid_selling_price=='True', 'invalid selling price; ', ''),",
 						"    iif(invalid_product_id=='True', 'invalid product id; ', ''),",
-						"    iif(rank_duplicate >=2, 'duplicate record; ', 'no error')",
+						"    iif(rank_duplicate >=2, 'duplicate record; ', '')",
 						")) ~> DeriveErrorMessage",
 						"ValidColumns sink(allowSchemaDrift: true,",
 						"     validateSchema: false,",
