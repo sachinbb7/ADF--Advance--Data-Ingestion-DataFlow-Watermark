@@ -32,31 +32,21 @@ flowchart TD
 
 `PL_MASTER_QUICKBASKET` executes the availability/ingestion pipeline, reads the Orders HWM, and invokes `PL_02_PROCESS_ORDERS`. The captured Debug run shows all three master activities completed successfully.
 
-![Master QuickBasket pipeline succeeded](docs/images/master-pipeline-success.png)
-
 ### Daily file availability checks
 
 `PL_UNTIL` uses Get Metadata activities inside an Until loop to wait for Customers, Products, Orders, and Payment/Return files before ingestion begins.
-
-![Until pipeline with metadata file checks](docs/images/until-file-checks.png)
 
 ### Metadata-driven ingestion
 
 `PL_DATA_INGESTION` prepares the file array, iterates with ForEach, and uses Switch to route each source into its corresponding ADLS Raw folder.
 
-![Metadata-driven ForEach and Switch ingestion](docs/images/metadata-driven-ingestion.png)
-
 ### Check-and-ingest control pipeline
 
 `PL_01_CHECK_AND_INGEST` runs the Until child pipeline, invokes ingestion after availability succeeds, and explicitly fails when ingestion fails.
 
-![Check and ingest orchestration](docs/images/check-and-ingest-pipeline.png)
-
 ### Processing, HWM, and operational logging
 
 `PL_02_PROCESS_ORDERS` executes the Mapping Data Flow. Its success path updates the HWM and writes a success log; its failure path writes the Data Flow error to the failure log.
-
-![Processing pipeline with HWM and SQL logging](docs/images/process-orders-pipeline.png)
 
 > For strict production sequencing, connect the Success Logging activity after the HWM Stored Procedure succeeds. This prevents a success record if the Data Flow succeeds but the SQL HWM update fails.
 
