@@ -54,13 +54,9 @@ flowchart TD
 
 The first half of `DF_PROCESS_ORDERS` reads Raw Orders, applies the HWM filter, calculates the new HWM through a constant-key aggregate, writes it to `HwmCache`, and enriches the incremental order stream with Customer, Product, and Payment/Return lookups.
 
-![Mapping Data Flow sources, HWM and lookups](docs/images/data-flow-sources-and-hwm.png)
-
 ### Mapping Data Flow — Curated, Rejected, and Summary outputs
 
 The final half derives revenue and validation results, splits valid and invalid rows, publishes enriched Curated Orders, retains invalid rows in Rejected Orders, and aggregates the valid stream into the Store/Product Summary.
-
-![Mapping Data Flow curated rejected and summary sinks](docs/images/data-flow-outputs.png)
 
 ### End-to-end workflow
 
