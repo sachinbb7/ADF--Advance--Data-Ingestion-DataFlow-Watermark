@@ -1,4 +1,4 @@
-# QuickBasket Production-Style ETL & Incremental Data Pipeline 
+# QuickBasket Production-Style ETL & Incremental Data Pipeline
 
 An end-to-end Azure data engineering project that uses **Azure Data Factory (ADF)**, **Azure Blob Storage**, **Azure Data Lake Storage Gen2 (ADLS)**, **Azure SQL Database**, **Mapping Data Flows**, and **GitHub integration** to ingest, validate, enrich, and publish QuickBasket order data.
 
