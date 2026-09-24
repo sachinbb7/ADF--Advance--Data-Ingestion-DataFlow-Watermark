@@ -1,0 +1,15 @@
+{
+	"name": "df-pricing-de-dev",
+	"properties": {
+		"trustModeClaimForMi": {
+			"value": "Disabled",
+			"editable": true
+		}
+	},
+	"location": "centralindia",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "7b96ed51-722c-410b-b254-b9a481ace1f3",
+		"tenantId": "d185c5b3-ca6c-4bdc-a620-03c96d9c1710"
+	}
+}

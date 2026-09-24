@@ -1,0 +1,15 @@
+{
+	"name": "ls_REST",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"annotations": [],
+		"type": "RestService",
+		"typeProperties": {
+			"url": "https://euros-francisco-uni-utilities.trycloudflare.com/",
+			"enableServerCertificateValidation": true,
+			"authenticationType": "Basic",
+			"userName": "sbb",
+			"encryptedCredential": "ew0KICAiVmVyc2lvbiI6ICIyMDE3LTExLTMwIiwNCiAgIlByb3RlY3Rpb25Nb2RlIjogIktleSIsDQogICJTZWNyZXRDb250ZW50VHlwZSI6ICJQbGFpbnRleHQiLA0KICAiQ3JlZGVudGlhbElkIjogIkRBVEFGQUNUT1JZQEJBMzgxQjc1LTExN0YtNEEyQS1BNjFELTJGNEVCQkMzQkI4MF81NTk1MDE0Yy0zZTBlLTQwYWQtYjg1Zi0yNTEwNThkMmU4MmMiDQp9"
+		}
+	}
+}
