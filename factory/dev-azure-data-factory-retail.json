@@ -1,0 +1,15 @@
+{
+	"name": "dev-azure-data-factory-retail",
+	"properties": {
+		"trustModeClaimForMi": {
+			"value": "Disabled",
+			"editable": true
+		}
+	},
+	"location": "eastus",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "c6491706-1d0c-4556-9a04-65f15517e941",
+		"tenantId": "4fbd44bc-8b54-4c06-b62a-01a8c8d99919"
+	}
+}
